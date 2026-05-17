@@ -73,7 +73,10 @@ table_count() {
 }
 
 run_database_setup() {
-  if ! truthy "${RENTEASE_AUTO_MIGRATE:-false}" && ! truthy "${RENTEASE_AUTO_SEED:-false}"; then
+  local auto_migrate="${RENTEASE_AUTO_MIGRATE:-true}"
+  local auto_seed="${RENTEASE_AUTO_SEED:-true}"
+
+  if ! truthy "$auto_migrate" && ! truthy "$auto_seed"; then
     return 0
   fi
 
@@ -81,12 +84,12 @@ run_database_setup() {
     return 0
   fi
 
-  if truthy "${RENTEASE_AUTO_MIGRATE:-false}"; then
+  if truthy "$auto_migrate"; then
     echo "Applying RentEase base schema..."
     run_sql_file "/opt/rentease/database/rentease_base_schema.sql"
   fi
 
-  if truthy "${RENTEASE_AUTO_SEED:-false}"; then
+  if truthy "$auto_seed"; then
     local users_count
     users_count="$(table_count users | tr -d '[:space:]')"
 

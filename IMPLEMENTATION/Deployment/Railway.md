@@ -557,9 +557,9 @@ MAIL_REPLY_TO=renteasesupport@gmail.com
 
 Do not put the real Gmail password in GitHub or in this markdown file. Use a Gmail App Password in Railway only.
 
-`RENTEASE_AUTO_MIGRATE=true` applies `database/rentease_base_schema.sql` at backend startup.
+`RENTEASE_AUTO_MIGRATE=true` applies `database/rentease_base_schema.sql` at backend startup. The backend Docker image now defaults this to `true` so a fresh Railway MySQL database is initialized automatically.
 
-`RENTEASE_AUTO_SEED=true` applies `database/staging_seed.sql` only when the `users` table is empty. After the first successful seed, it skips seeding so existing users are not wiped.
+`RENTEASE_AUTO_SEED=true` applies `database/staging_seed.sql` only when the `users` table is empty. The backend Docker image now defaults this to `true` for a fresh demo database. After the first successful seed, it skips seeding so existing users are not wiped.
 
 For real production after testing, change this variable:
 
