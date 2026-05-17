@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -9,19 +9,17 @@ import {
   Menu,
   MessageCircle,
   ShieldCheck,
-  Star,
   WalletCards,
   X,
 } from 'lucide-react';
 import RoomCard from '../components/design/RoomCard.jsx';
+import { boardingHouseApi, roomsApi } from '../api/client.js';
+import { buildPropertyListings } from '../utils/propertyBrowse.js';
 import {
   faqs,
-  featuredRooms,
+  featuredRooms as fallbackFeaturedRooms,
   featureImages,
   publicHeroImage,
-  publicStats,
-  testimonials,
-  trustItems,
 } from '../data/renteaseContent.js';
 
 const navLinks = [
@@ -29,6 +27,26 @@ const navLinks = [
   { label: 'Properties', href: '/properties' },
   { label: 'About', href: '#about' },
   { label: 'Contact', href: '#contact' },
+];
+
+const SUPPORT_EMAIL = 'renteasesupport@gmail.com';
+
+const workflowItems = [
+  {
+    icon: Building2,
+    title: 'Compare listings',
+    description: 'Browse properties and available rooms with clear rates, capacity, and basic amenities.',
+  },
+  {
+    icon: CalendarCheck,
+    title: 'Handle requests',
+    description: 'Let seekers reserve rooms while landlords review approvals and tenant status in one place.',
+  },
+  {
+    icon: MessageCircle,
+    title: 'Share access',
+    description: 'Seekers can generate guardian links for read-only room and rent visibility when needed.',
+  },
 ];
 
 function PublicNav({ scrolled, mobileOpen, setMobileOpen }) {
@@ -107,6 +125,12 @@ export default function RentEaseLanding() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
+  const [landingData, setLandingData] = useState({
+    houses: [],
+    rooms: [],
+    loading: true,
+    error: '',
+  });
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 24);
@@ -114,6 +138,84 @@ export default function RentEaseLanding() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadLandingData() {
+      try {
+        const [housesPayload, roomsPayload] = await Promise.all([
+          boardingHouseApi.list(),
+          roomsApi.list({ availability_status: 'available', include_archived: 0 }),
+        ]);
+
+        if (!isActive) {
+          return;
+        }
+
+        setLandingData({
+          houses: Array.isArray(housesPayload.data) ? housesPayload.data : [],
+          rooms: Array.isArray(roomsPayload.data) ? roomsPayload.data : [],
+          loading: false,
+          error: '',
+        });
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        setLandingData({
+          houses: [],
+          rooms: [],
+          loading: false,
+          error: error?.errors?.[0] || error?.message || 'Live listings are currently unavailable.',
+        });
+      }
+    }
+
+    queueMicrotask(loadLandingData);
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const properties = useMemo(
+    () => buildPropertyListings(landingData.houses, landingData.rooms),
+    [landingData.houses, landingData.rooms],
+  );
+
+  const availableRooms = useMemo(
+    () => properties.flatMap((property) => property.availableRooms),
+    [properties],
+  );
+
+  const featuredRoomCards = availableRooms.length > 0
+    ? availableRooms.slice(0, 3)
+    : fallbackFeaturedRooms.slice(0, 3);
+
+  const totalRoomTypes = new Set(
+    properties.flatMap((property) => property.roomTypes).filter(Boolean),
+  ).size;
+
+  const liveStats = [
+    {
+      label: 'Listed properties',
+      value: landingData.loading ? '...' : String(properties.length),
+    },
+    {
+      label: 'Available rooms',
+      value: landingData.loading ? '...' : String(availableRooms.length),
+    },
+    {
+      label: 'Room types',
+      value: landingData.loading ? '...' : String(totalRoomTypes),
+    },
+    {
+      label: 'Guardian links',
+      value: 'Secure',
+    },
+  ];
 
   return (
     <main className="re-public-page">
@@ -125,11 +227,11 @@ export default function RentEaseLanding() {
         style={{ '--hero-image': `url(${publicHeroImage})` }}
       >
         <div className="re-hero-content">
-          <p className="re-eyebrow">Philippine boarding house rentals</p>
-          <h1>Your Home Away From Home</h1>
+          <p className="re-eyebrow">Rental operations platform</p>
+          <h1>Find rooms. Manage rentals. Keep everyone aligned.</h1>
           <p>
-            Find verified boarding houses, apartments, dormitories, and student-friendly rooms
-            with clear monthly rates, availability, and guardian access built in.
+            RentEase keeps property discovery, reservations, rent tracking, and guardian access
+            organized in one clean workspace.
           </p>
           <div className="re-hero-actions">
             <button type="button" className="re-btn re-btn-gold" onClick={() => navigate('/properties')}>
@@ -143,7 +245,7 @@ export default function RentEaseLanding() {
       </section>
 
       <section className="re-trust-strip" aria-label="RentEase trust indicators">
-        {trustItems.map((item) => (
+        {liveStats.map((item) => (
           <article key={item.label}>
             <strong>{item.value}</strong>
             <span>{item.label}</span>
@@ -153,12 +255,15 @@ export default function RentEaseLanding() {
 
       <section className="re-section">
         <div className="re-section-heading">
-          <p className="re-eyebrow">Featured room previews</p>
-          <h2>Start with properties, then compare their available rooms</h2>
+          <div>
+            <p className="re-eyebrow">Live availability</p>
+            <h2>Start with properties, then compare available rooms</h2>
+            {landingData.error && <p className="re-landing-live-note">{landingData.error}</p>}
+          </div>
           <Link to="/properties">View all properties</Link>
         </div>
         <div className="re-room-grid">
-          {featuredRooms.slice(0, 3).map((room) => (
+          {featuredRoomCards.map((room) => (
             <RoomCard
               key={room.id}
               room={room}
@@ -172,11 +277,11 @@ export default function RentEaseLanding() {
         <article>
           <img src={featureImages.study} alt="Student study desk in a warm room" loading="lazy" />
           <div>
-            <p className="re-eyebrow">Student-first search</p>
-            <h2>Rooms that show the details before you ask</h2>
+            <p className="re-eyebrow">Property-first search</p>
+            <h2>Room details stay clear before anyone reserves</h2>
             <p>
-            Browse property type, rates, capacity, amenities, room status, and house rules so
-              moving decisions feel clear before reservation.
+              Browse property type, rates, capacity, amenities, room status, and house rules before
+              opening a reservation request.
             </p>
             <ul>
               <li>
@@ -197,8 +302,8 @@ export default function RentEaseLanding() {
             <p className="re-eyebrow">Managed operations</p>
             <h2>Landlords can track rooms, rent, and requests</h2>
             <p>
-              RentEase keeps the day-to-day boarding house workflow organized, from pending
-              approvals to rent status and activity logs.
+              RentEase keeps the day-to-day rental workflow organized, from pending approvals to
+              rent status and activity logs.
             </p>
             <ul>
               <li>
@@ -219,17 +324,17 @@ export default function RentEaseLanding() {
           <img src={featureImages.family} alt="Family reviewing housing information" loading="lazy" />
           <div>
             <p className="re-eyebrow">Guardian visibility</p>
-            <h2>Parent access without exposing landlord tools</h2>
+            <h2>Share read-only access without exposing controls</h2>
             <p>
-              Guardians get a focused read-only view of dependent room, reservation, and payment
-              status without landlord-only controls.
+              Seekers can generate guardian access links for focused room, reservation, and payment
+              status visibility without landlord-only tools.
             </p>
             <ul>
               <li>
-                <MessageCircle size={18} /> Linked parent and seeker accounts
+                <MessageCircle size={18} /> Guardian links from seeker accounts
               </li>
               <li>
-                <Building2 size={18} /> Room and boarding house overview
+                <Building2 size={18} /> Room and property overview
               </li>
               <li>
                 <ShieldCheck size={18} /> Minimal, secure interface
@@ -240,7 +345,7 @@ export default function RentEaseLanding() {
       </section>
 
       <section className="re-stats-band">
-        {publicStats.map((item) => (
+        {liveStats.map((item) => (
           <article key={item.label}>
             <strong>{item.value}</strong>
             <span>{item.label}</span>
@@ -250,28 +355,40 @@ export default function RentEaseLanding() {
 
       <section className="re-section">
         <div className="re-section-heading centered">
-          <p className="re-eyebrow">Resident feedback</p>
-          <h2>Trusted by students, parents, and landlords</h2>
+          <p className="re-eyebrow">Workflow</p>
+          <h2>A simple path from listing to occupancy</h2>
         </div>
-        <div className="re-testimonial-grid">
-          {testimonials.map((item) => (
-            <article key={item.name} className="re-testimonial-card">
-              <div aria-label={`${item.rating} star rating`}>
-                {Array.from({ length: item.rating }).map((_, index) => (
-                  <Star key={index} size={16} fill="currentColor" />
-                ))}
-              </div>
-              <p>"{item.quote}"</p>
-              <strong>{item.name}</strong>
-            </article>
-          ))}
+        <div className="re-platform-grid">
+          {workflowItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article key={item.title} className="re-platform-card">
+                <Icon size={22} />
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            );
+          })}
         </div>
+      </section>
+
+      <section id="contact" className="re-cta-band">
+        <div>
+          <p className="re-eyebrow">Support</p>
+          <h2>Need help with RentEase setup or account access?</h2>
+          <a className="re-support-email" href={`mailto:${SUPPORT_EMAIL}`}>
+            {SUPPORT_EMAIL}
+          </a>
+        </div>
+        <button type="button" className="re-btn re-btn-gold" onClick={() => navigate('/properties')}>
+          Browse Properties
+        </button>
       </section>
 
       <section className="re-section re-faq-section">
         <div className="re-section-heading centered">
           <p className="re-eyebrow">FAQ</p>
-          <h2>Questions before moving in</h2>
+          <h2>Questions before getting started</h2>
         </div>
         <div className="re-faq-list">
           {faqs.map((faq, index) => (
@@ -288,20 +405,10 @@ export default function RentEaseLanding() {
         </div>
       </section>
 
-      <section id="contact" className="re-cta-band">
-        <div>
-          <p className="re-eyebrow">Ready to compare properties?</p>
-          <h2>Start with available properties and reserve a room when you are ready.</h2>
-        </div>
-        <button type="button" className="re-btn re-btn-gold" onClick={() => navigate('/properties')}>
-          Browse Properties
-        </button>
-      </section>
-
       <footer className="re-footer">
         <div>
           <h3>RentEase</h3>
-          <p>Boarding house rental management for students, parents, and landlords.</p>
+          <p>Rental management for seekers, guardians, and property operators.</p>
         </div>
         <div>
           <h4>Quick Links</h4>
@@ -311,8 +418,7 @@ export default function RentEaseLanding() {
         </div>
         <div>
           <h4>Contact</h4>
-          <p>support@rentease.local</p>
-          <p>Manila, Philippines</p>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
         </div>
       </footer>
     </main>

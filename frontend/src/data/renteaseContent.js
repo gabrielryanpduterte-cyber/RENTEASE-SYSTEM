@@ -1,5 +1,5 @@
 export const publicHeroImage =
-  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1800&q=80';
+  'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1800&q=80';
 
 export const authImage =
   'https://images.unsplash.com/photo-1560185007-c5ca9d2c014d?auto=format&fit=crop&w=1400&q=80';
@@ -69,7 +69,7 @@ export const featuredRooms = [
   {
     id: '305',
     roomNumber: '305',
-    name: 'Shared Barkada Suite',
+    name: 'Shared Suite',
     type: 'Shared',
     rate: 8500,
     capacity: 3,
@@ -84,7 +84,7 @@ export const featuredRooms = [
     ],
     amenities: ['WiFi', 'Shared bathroom', 'Bunk beds', 'Study nook'],
     description:
-      'A larger shared room for students who want lower costs while staying close to campus and essential services.',
+      'A larger shared room for seekers who want lower costs while staying close to essential services.',
     rules: [
       'Maintain assigned bed and cabinet areas.',
       'No cooking appliances inside the room.',
@@ -110,7 +110,7 @@ export const featuredRooms = [
     ],
     amenities: ['WiFi', 'Air conditioning', 'Private bathroom', 'Large desk'],
     description:
-      'A private room with stronger comfort features for students who need reliable rest, privacy, and focused work space.',
+      'A private room with stronger comfort features for seekers who need reliable rest, privacy, and focused work space.',
     rules: [
       'Room is for one tenant only.',
       'Keep balcony and windows secured when leaving.',
@@ -123,26 +123,26 @@ export const featuredRooms = [
 export const trustItems = [
   { label: 'Verified Properties', value: '42+' },
   { label: 'Real-time Availability', value: 'Live' },
-  { label: 'Transparent Pricing', value: 'PHP' },
-  { label: 'Parent Access', value: 'Secure' },
+  { label: 'Transparent Rates', value: 'Clear' },
+  { label: 'Guardian Links', value: 'Secure' },
 ];
 
 export const publicStats = [
   { label: 'Rooms Managed', value: '120+' },
   { label: 'Active Tenants', value: '300+' },
-  { label: 'Years Serving Students', value: '8' },
-  { label: 'Happy Residents', value: '4.8/5' },
+  { label: 'Managed Workflows', value: 'Live' },
+  { label: 'Resident Rating', value: '4.8/5' },
 ];
 
 export const testimonials = [
   {
-    name: 'Mika, 2nd Year Student',
+    name: 'Mika, Resident',
     quote:
-      'RentEase made it easier to compare rooms before moving near campus. I could see the rent, rules, and availability in one place.',
+      'RentEase made it easier to compare rooms before moving. I could see the rent, rules, and availability in one place.',
     rating: 5,
   },
   {
-    name: 'Mrs. Santos, Parent',
+    name: 'Elena, Guardian',
     quote:
       'The guardian view helped me check rent status without calling the landlord every week.',
     rating: 5,
@@ -157,19 +157,19 @@ export const testimonials = [
 
 export const faqs = [
   {
-    question: 'How do students reserve a room?',
+    question: 'How do seekers reserve a room?',
     answer:
-      'Students browse properties first, compare available rooms inside each property, and submit a reservation request after signing in.',
+      'Seekers browse properties first, compare available rooms inside each property, and submit a reservation request after signing in.',
   },
   {
-    question: 'Can parents view rent and room status?',
+    question: 'Can guardians view rent and room status?',
     answer:
-      'Yes. A parent account can be linked to a seeker account so guardians can view approved room, reservation, and rent status.',
+      'Yes. A seeker can generate a guardian access link for read-only room, reservation, and rent status visibility.',
   },
   {
     question: 'Are room prices visible before login?',
     answer:
-      'Yes. Public room cards show monthly rates and availability so students can compare options quickly.',
+      'Yes. Public room cards show monthly rates and availability so seekers can compare options quickly.',
   },
   {
     question: 'Can landlords manage rooms and payments?',

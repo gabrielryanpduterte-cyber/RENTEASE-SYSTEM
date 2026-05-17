@@ -12516,3 +12516,189 @@ html.dark .re-auth-page .re-btn-primary {
   background: var(--color-primary);
   color: var(--color-white);
 }
+
+.google-signin-wrapper {
+  display: grid;
+  justify-items: center;
+}
+
+.google-signin-wrapper > div {
+  display: flex;
+  justify-content: center;
+}
+
+.google-signin-wrapper iframe {
+  display: block;
+  margin: 0 auto !important;
+}
+
+.re-public-page .re-public-nav,
+.re-public-page .re-public-nav.is-scrolled {
+  border-bottom: 1px solid rgba(28, 28, 26, 0.08);
+  background: rgba(255, 253, 248, 0.96);
+  color: var(--color-dark);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+}
+
+.re-public-page .re-public-nav .re-brand,
+.re-public-page .re-public-nav.is-scrolled .re-brand,
+.re-public-page .re-public-nav:not(.is-scrolled) .re-brand {
+  color: var(--color-dark);
+}
+
+.re-public-page .re-public-nav .re-nav-links a,
+.re-public-page .re-public-nav.is-scrolled .re-nav-links a {
+  color: var(--color-muted);
+}
+
+.re-public-page .re-public-nav .re-nav-links a:hover,
+.re-public-page .re-public-nav.is-scrolled .re-nav-links a:hover {
+  color: var(--color-dark);
+}
+
+.re-public-page .re-hero {
+  min-height: 82vh;
+  padding: 8rem 1rem 5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(247, 244, 237, 0.76)),
+    var(--hero-image) center / cover no-repeat;
+  color: var(--color-dark);
+  text-align: center;
+}
+
+.re-public-page .re-hero-content {
+  width: min(780px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.re-public-page .re-hero .re-eyebrow {
+  color: var(--color-primary);
+}
+
+.re-public-page .re-hero h1,
+.re-public-page .re-hero-content h1 {
+  max-width: 760px;
+  margin: 0 auto;
+  color: var(--color-dark);
+  font-size: clamp(2.6rem, 7vw, 4.5rem);
+  line-height: 1.03;
+}
+
+.re-public-page .re-hero p:not(.re-eyebrow),
+.re-public-page .re-hero-content p {
+  width: min(660px, 100%);
+  margin: 1.15rem auto 0;
+  color: var(--color-muted);
+  font-size: 1.08rem;
+  line-height: 1.72;
+}
+
+.re-public-page .re-hero-actions {
+  justify-content: center;
+}
+
+.re-public-page .re-btn-outline-light {
+  border-color: rgba(28, 28, 26, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--color-dark);
+}
+
+.re-public-page .re-btn-outline-light:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.re-public-page .re-trust-strip {
+  margin-top: -1.6rem;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+}
+
+.re-public-page .re-section-heading h2 {
+  max-width: 760px;
+}
+
+.re-landing-live-note {
+  margin: 0.55rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+}
+
+.re-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.re-platform-card {
+  min-height: 220px;
+  padding: 1.4rem;
+  border: 1px solid rgba(28, 28, 26, 0.1);
+  border-radius: 8px;
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+}
+
+.re-platform-card svg {
+  color: var(--color-primary);
+}
+
+.re-platform-card h3 {
+  margin: 1rem 0 0.55rem;
+  color: var(--color-dark);
+  font-size: 1.15rem;
+}
+
+.re-platform-card p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
+.re-public-page .re-cta-band {
+  border-radius: 8px;
+  background: var(--color-dark);
+}
+
+.re-support-email {
+  display: inline-flex;
+  margin-top: 0.9rem;
+  color: var(--color-gold);
+  font-weight: 800;
+}
+
+@media (max-width: 767px) {
+  .re-public-page .re-public-nav,
+  .re-public-page .re-public-nav.is-scrolled {
+    color: var(--color-dark);
+  }
+
+  .re-public-page .re-mobile-menu-button,
+  .re-public-page .re-public-nav.is-scrolled .re-mobile-menu-button {
+    border-color: rgba(28, 28, 26, 0.12);
+    background: var(--color-white);
+    color: var(--color-dark);
+    box-shadow: none;
+  }
+
+  .re-public-page .re-hero {
+    min-height: 76vh;
+    padding: 6.5rem 1rem 4rem;
+  }
+
+  .re-public-page .re-hero-content {
+    width: min(100%, 360px);
+  }
+
+  .re-public-page .re-hero h1,
+  .re-public-page .re-hero-content h1 {
+    max-width: 340px;
+    font-size: clamp(2.1rem, 10vw, 2.75rem);
+  }
+
+  .re-platform-grid {
+    grid-template-columns: 1fr;
+  }
+}
