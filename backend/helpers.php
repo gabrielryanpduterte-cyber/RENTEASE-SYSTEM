@@ -284,21 +284,13 @@ function remember_cookie_name(): string
 
 function remember_cookie_options(int $expiresAt): array
 {
-    $sameSite = ucfirst(strtolower(config_value('RENTEASE_COOKIE_SAMESITE', 'Lax')));
-    if (!in_array($sameSite, ['Lax', 'Strict', 'None'], true)) {
-        $sameSite = 'Lax';
-    }
-    if ($sameSite === 'None' && !request_is_secure()) {
-        $sameSite = 'Lax';
-    }
-
     return [
         'expires' => $expiresAt,
         'path' => '/',
         'domain' => config_value('RENTEASE_COOKIE_DOMAIN', ''),
         'secure' => request_is_secure(),
         'httponly' => true,
-        'samesite' => $sameSite,
+        'samesite' => cookie_same_site_value(),
     ];
 }
 

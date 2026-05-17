@@ -111,6 +111,49 @@ function request_is_secure(): bool
         || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
 }
 
+function configured_frontend_backend_cross_origin(): bool
+{
+    $backendUrl = config_value('RENTEASE_APP_URL', '');
+    $frontendUrl = config_value('RENTEASE_FRONTEND_URL', '');
+
+    if ($backendUrl === '' || $frontendUrl === '') {
+        return false;
+    }
+
+    $backendParts = parse_url($backendUrl);
+    $frontendParts = parse_url($frontendUrl);
+
+    if (!is_array($backendParts) || !is_array($frontendParts)) {
+        return false;
+    }
+
+    $backendOrigin = strtolower((string)($backendParts['scheme'] ?? '')) . '://' . strtolower((string)($backendParts['host'] ?? ''));
+    $frontendOrigin = strtolower((string)($frontendParts['scheme'] ?? '')) . '://' . strtolower((string)($frontendParts['host'] ?? ''));
+
+    $backendPort = isset($backendParts['port']) ? ':' . (string)$backendParts['port'] : '';
+    $frontendPort = isset($frontendParts['port']) ? ':' . (string)$frontendParts['port'] : '';
+
+    return $backendOrigin . $backendPort !== $frontendOrigin . $frontendPort;
+}
+
+function cookie_same_site_value(): string
+{
+    $sameSite = ucfirst(strtolower(config_value('RENTEASE_COOKIE_SAMESITE', app_env() === 'production' ? 'None' : 'Lax')));
+    if (!in_array($sameSite, ['Lax', 'Strict', 'None'], true)) {
+        $sameSite = app_env() === 'production' ? 'None' : 'Lax';
+    }
+
+    if (app_env() === 'production' && configured_frontend_backend_cross_origin() && request_is_secure()) {
+        $sameSite = 'None';
+    }
+
+    if ($sameSite === 'None' && !request_is_secure()) {
+        $sameSite = 'Lax';
+    }
+
+    return $sameSite;
+}
+
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=utf-8');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -142,13 +185,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
 
 if (session_status() === PHP_SESSION_NONE) {
     $isSecure = request_is_secure();
-    $sameSite = ucfirst(strtolower(config_value('RENTEASE_COOKIE_SAMESITE', 'Lax')));
-    if (!in_array($sameSite, ['Lax', 'Strict', 'None'], true)) {
-        $sameSite = 'Lax';
-    }
-    if ($sameSite === 'None' && !$isSecure) {
-        $sameSite = 'Lax';
-    }
+    $sameSite = cookie_same_site_value();
 
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');

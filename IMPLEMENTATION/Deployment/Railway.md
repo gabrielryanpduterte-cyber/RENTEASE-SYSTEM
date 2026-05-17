@@ -289,7 +289,7 @@ RENTEASE_DB_USER=${{rentease-mysql.MYSQLUSER}}
 RENTEASE_DB_PASS=${{rentease-mysql.MYSQLPASSWORD}}
 
 RENTEASE_ALLOWED_ORIGINS=https://PASTE_FRONTEND_DOMAIN_HERE
-RENTEASE_COOKIE_SAMESITE=Lax
+RENTEASE_COOKIE_SAMESITE=None
 RENTEASE_COOKIE_DOMAIN=
 
 GOOGLE_OAUTH_ENABLED=false
@@ -515,6 +515,8 @@ Important: frontend variables must use the `VITE_` prefix. The frontend does not
 
 Important: after changing frontend `VITE_` variables, redeploy the frontend. Vite bakes these values into the production JavaScript bundle during `npm run build`.
 
+Important: because the Railway frontend and backend use different public origins, PHP session cookies must use `SameSite=None` and `Secure`. If this is left as `Lax`, login can succeed but dashboard API calls will return `401 Authentication required`.
+
 #### Backend variables for `rentease-backend`
 
 Paste this into the `rentease-backend` service only:
@@ -534,7 +536,7 @@ RENTEASE_DB_USER=${{rentease-mysql.MYSQLUSER}}
 RENTEASE_DB_PASS=${{rentease-mysql.MYSQLPASSWORD}}
 
 RENTEASE_ALLOWED_ORIGINS=https://rentease-frontend-production.up.railway.app
-RENTEASE_COOKIE_SAMESITE=Lax
+RENTEASE_COOKIE_SAMESITE=None
 RENTEASE_COOKIE_DOMAIN=
 
 RENTEASE_AUTO_MIGRATE=true
