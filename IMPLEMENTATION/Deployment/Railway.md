@@ -179,6 +179,30 @@ rentease-mysql
 
 Use Railway's generated values. Do not use the local Docker values like `root`, `rentease`, or port `3308` in production.
 
+Important MySQL warning:
+
+If Railway shows a warning for `MYSQL_PUBLIC_URL`, do not use `MYSQL_PUBLIC_URL` in the RentEase backend variables.
+
+`MYSQL_PUBLIC_URL` points through Railway's public TCP proxy. Railway warns about it because connecting through a public endpoint can create egress charges. RentEase should connect to MySQL from the backend service using Railway's private project networking variables instead.
+
+Use these private/internal references in `rentease-backend`:
+
+```env
+RENTEASE_DB_HOST=${{rentease-mysql.MYSQLHOST}}
+RENTEASE_DB_PORT=${{rentease-mysql.MYSQLPORT}}
+RENTEASE_DB_NAME=${{rentease-mysql.MYSQLDATABASE}}
+RENTEASE_DB_USER=${{rentease-mysql.MYSQLUSER}}
+RENTEASE_DB_PASS=${{rentease-mysql.MYSQLPASSWORD}}
+```
+
+Do not add this to the backend:
+
+```env
+MYSQL_PUBLIC_URL=${{rentease-mysql.MYSQL_PUBLIC_URL}}
+```
+
+Only use public MySQL connection details when connecting from your own computer with a MySQL client. The deployed backend should use the private/internal Railway variables above.
+
 Step 4 is done when the project has one active service named `rentease-mysql`.
 
 ## Step 5: Deploy the backend service
