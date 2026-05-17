@@ -20,4 +20,4 @@ WORKDIR /var/www/html
 
 COPY backend/ /var/www/html/
 
-CMD ["bash", "-lc", "composer install --no-interaction && mkdir -p storage/uploads storage/private/proofs storage/private/ids storage/public/rooms storage/public/boarding_houses storage/profiles && chown -R www-data:www-data storage || true; apache2-foreground"]
+CMD ["bash", "-lc", "export APACHE_PORT=${PORT:-80}; sed -i \"s/Listen 80/Listen ${APACHE_PORT}/\" /etc/apache2/ports.conf; sed -i \"s/<VirtualHost \\*:80>/<VirtualHost *:${APACHE_PORT}>/\" /etc/apache2/sites-available/000-default.conf; composer install --no-interaction && mkdir -p storage/uploads storage/private/proofs storage/private/ids storage/public/rooms storage/public/boarding_houses storage/profiles && chown -R www-data:www-data storage || true; apache2-foreground"]
