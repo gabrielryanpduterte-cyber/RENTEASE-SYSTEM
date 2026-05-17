@@ -12411,3 +12411,108 @@ html.dark .property-map-empty {
     min-height: auto;
   }
 }
+
+html.dark .re-auth-page {
+  background: var(--color-cream);
+  color: var(--color-dark);
+  color-scheme: light;
+}
+
+html.dark .re-auth-panel {
+  background: var(--color-cream);
+}
+
+html.dark .re-auth-card {
+  border-color: rgba(45, 106, 79, 0.12);
+  background: var(--color-white);
+  color: var(--color-dark);
+  box-shadow: var(--shadow-lift);
+}
+
+html.dark .re-auth-card h2 {
+  color: var(--color-forest);
+}
+
+html.dark .re-auth-card > p:not(.re-eyebrow),
+html.dark .re-auth-switch,
+html.dark .re-role-hint,
+html.dark .re-auth-options label {
+  color: var(--color-muted);
+}
+
+html.dark .re-auth-page .re-form-stack label,
+html.dark .re-auth-page .re-form-stack label span {
+  color: var(--color-dark);
+}
+
+html.dark .re-auth-page .re-auth-visual .re-brand,
+html.dark .re-auth-page .re-auth-visual h1 {
+  color: var(--color-white);
+}
+
+html.dark .re-auth-page .re-auth-visual p,
+html.dark .re-auth-page .re-auth-visual li {
+  color: var(--color-light-green);
+}
+
+html.dark .re-auth-page :is(
+  input,
+  select,
+  textarea,
+  .re-input-with-icon,
+  .re-input-with-icon input,
+  .password-input-control.re-input-with-icon input,
+  .password-input-control input
+) {
+  border-color: rgba(45, 106, 79, 0.2);
+  background: var(--color-white);
+  color: var(--color-dark);
+  box-shadow: none;
+}
+
+html.dark .re-auth-page :is(input, textarea)::placeholder {
+  color: var(--color-muted);
+}
+
+html.dark .re-auth-page :is(
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill
+) {
+  border-color: rgba(45, 106, 79, 0.2);
+  -webkit-text-fill-color: var(--color-dark);
+  box-shadow: 0 0 0 1000px var(--color-white) inset;
+}
+
+html.dark .re-auth-page .re-input-with-icon svg,
+html.dark .re-auth-page .password-leading-icon,
+html.dark .re-auth-page .password-toggle-button {
+  color: var(--color-primary);
+}
+
+html.dark .re-auth-page .password-input-control.re-input-with-icon,
+html.dark .re-auth-page .password-input-control {
+  border: 0;
+  background: transparent;
+}
+
+html.dark .re-auth-page .re-role-tabs {
+  background: var(--color-mist);
+}
+
+html.dark .re-auth-page .re-role-tabs button {
+  color: var(--color-muted);
+}
+
+html.dark .re-auth-page .re-role-tabs button.active {
+  background: var(--color-white);
+  color: var(--color-forest);
+  box-shadow: var(--shadow-card);
+}
+
+html.dark .re-auth-page .re-btn-primary {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
