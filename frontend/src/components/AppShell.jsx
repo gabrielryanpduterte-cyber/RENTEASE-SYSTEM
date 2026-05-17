@@ -1,0 +1,241 @@
+import { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth.js';
+import { roleLabel, roleDashboardPath } from '../utils/roles.js';
+import { 
+  LayoutDashboard, 
+  Users, 
+  Home, 
+  Building2,
+  Calendar, 
+  CreditCard, 
+  MessageSquare, 
+  Settings,
+  FileText,
+  Activity,
+  AlertCircle,
+  PanelsTopLeft,
+  ChevronLeft,
+  Menu,
+  LogOut,
+  Megaphone
+} from 'lucide-react';
+
+const NAV_BY_ROLE = Object.freeze({
+  seeker: [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/seeker/properties', label: 'Browse', icon: Building2 },
+    { to: '/dashboard/room', label: 'My Room', icon: Home },
+    { to: '/dashboard/reservations', label: 'Reservations', icon: Calendar },
+    { to: '/dashboard/rent', label: 'Payments', icon: CreditCard },
+    { to: '/dashboard/guardians', label: 'Guardian Access', icon: Users },
+    { to: '/seeker/feedback', label: 'Feedback', icon: MessageSquare },
+    { to: '/dashboard/profile', label: 'Profile', icon: Settings },
+  ],
+  parent: [
+    { to: '/parent/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/parent/dashboard#connections', label: 'Connections', icon: Users },
+    { to: '/parent/dashboard#monitoring', label: 'Monitoring', icon: Activity },
+    { to: '/parent/dashboard#payments', label: 'Payments', icon: CreditCard },
+    { to: '/parent/dashboard#feedback', label: 'Feedback', icon: MessageSquare },
+    { to: '/parent/dashboard#account', label: 'Account', icon: Settings },
+  ],
+  owner: [
+    { to: '/owner/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/owner/boarding-house', label: 'Property', icon: Home },
+    { to: '/owner/rooms', label: 'Rooms', icon: PanelsTopLeft },
+    { to: '/owner/reservations', label: 'Reservations', icon: Calendar },
+    { to: '/owner/tenants', label: 'Tenants', icon: Users },
+    { to: '/owner/announcements', label: 'Announcements', icon: Megaphone },
+    { to: '/owner/rent-tracking', label: 'Rent Tracking', icon: CreditCard },
+    { to: '/owner/reports', label: 'Reports', icon: FileText },
+    { to: '/owner/profile', label: 'Profile', icon: Settings },
+  ],
+  admin: [
+    { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/admin/users', label: 'Users', icon: Users },
+    { to: '/admin/boarding-houses', label: 'Boarding Houses', icon: Home },
+    { to: '/admin/reports', label: 'Reports', icon: FileText },
+    { to: '/admin/activity-logs', label: 'Activity Logs', icon: Activity },
+    { to: '/admin/error-logs', label: 'Error Logs', icon: AlertCircle },
+    { to: '/admin/config', label: 'Config', icon: Settings },
+    { to: '/admin/profile', label: 'Profile', icon: Settings },
+  ],
+});
+
+function AppShell({ title, subtitle, quickStats = [], children }) {
+  const { authState, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const navigate = useNavigate();
+
+  const user = authState.user;
+  const role = user?.role ?? 'seeker';
+  const navItems = NAV_BY_ROLE[role] ?? [];
+  const shellRole = NAV_BY_ROLE[role] ? role : 'guest';
+  const profileImageUrl = user?.profile_photo_url || user?.profile_picture || '';
+  const userInitial = user?.full_name?.trim()?.charAt(0)?.toUpperCase() || 'U';
+
+  async function onLogout() {
+    setLoggingOut(true);
+    await logout();
+    navigate('/login', { replace: true });
+  }
+
+  function closeMobileNav() {
+    setMobileNavOpen(false);
+  }
+
+  return (
+    <div
+      className={`modern-shell role-${shellRole}-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-open' : ''}`}
+    >
+      {/* Overlay for mobile */}
+      <button
+        type="button"
+        className="sidebar-overlay"
+        onClick={closeMobileNav}
+        aria-label="Close navigation"
+      />
+
+      {/* Sidebar */}
+      <aside className="modern-sidebar">
+        {/* Sidebar Header */}
+        <div className="sidebar-header">
+          <div className="sidebar-brand">
+            <div className="brand-icon">
+              <PanelsTopLeft size={24} />
+            </div>
+            {!sidebarCollapsed && (
+              <div className="brand-text">
+                <h1>RentEase</h1>
+                <p>{roleLabel(role)}</p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <ChevronLeft size={18} className={sidebarCollapsed ? 'rotate-180' : ''} />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="sidebar-nav">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `nav-item ${isActive ? 'active' : ''}`
+                }
+                end={item.to === roleDashboardPath(role)}
+                onClick={closeMobileNav}
+                title={sidebarCollapsed ? item.label : ''}
+              >
+                <Icon size={20} className="nav-icon" />
+                {!sidebarCollapsed && <span className="nav-label">{item.label}</span>}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="sidebar-footer">
+          {!sidebarCollapsed && (
+            <div className="user-info">
+              <div className="user-avatar">
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt="" referrerPolicy="no-referrer" />
+                ) : (
+                  userInitial
+                )}
+              </div>
+              <div className="user-details">
+                <p className="user-name">{user?.full_name || 'User'}</p>
+                <p className="user-email">{user?.email || 'No email'}</p>
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            className="logout-btn"
+            onClick={onLogout}
+            disabled={loggingOut}
+            title="Logout"
+          >
+            <LogOut size={18} />
+            {!sidebarCollapsed && <span>{loggingOut ? 'Signing out...' : 'Logout'}</span>}
+          </button>
+        </div>
+      </aside>
+
+      {role === 'seeker' && (
+        <nav className="seeker-bottom-nav" aria-label="Seeker mobile navigation">
+          {navItems.slice(0, 5).map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={`mobile-${item.to}`}
+                to={item.to}
+                className={({ isActive }) => `seeker-bottom-link ${isActive ? 'active' : ''}`}
+                title={item.label}
+                end={item.to === roleDashboardPath(role)}
+              >
+                <Icon size={21} />
+              </NavLink>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* Main Content */}
+      <main className="modern-main">
+        {/* Top Bar */}
+        <header className="modern-topbar">
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open navigation"
+          >
+            <Menu size={24} />
+          </button>
+          <div className="topbar-title">
+            <h2>{title}</h2>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+          <div className="topbar-actions">
+            <div className="user-badge">{roleLabel(role)}</div>
+          </div>
+        </header>
+
+        {/* Quick Stats */}
+        {quickStats.length > 0 && (
+          <section className="stats-grid">
+            {quickStats.map((item, index) => (
+              <div
+                className={`stat-card stat-${item.tone || 'neutral'}`}
+                key={`${item.label}-${index}`}
+              >
+                <p className="stat-label">{item.label}</p>
+                <p className="stat-value">{item.value}</p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Content Grid */}
+        <section className="content-grid">{children}</section>
+      </main>
+    </div>
+  );
+}
+
+export default AppShell;

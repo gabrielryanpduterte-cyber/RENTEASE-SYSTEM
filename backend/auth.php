@@ -1,0 +1,607 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/config/mail.php';
+
+require_methods(['GET', 'POST']);
+ensure_seeker_feature_schema();
+ensure_admin_schema();
+ensure_google_auth_schema();
+ensure_auth_token_schema();
+
+$method = request_method();
+$payload = $method === 'POST' ? request_payload() : [];
+$action = request_action($payload);
+
+try {
+    if ($method === 'POST' && $action === 'register') {
+        handle_register($payload);
+    }
+
+    if ($method === 'POST' && $action === 'login') {
+        handle_login($payload);
+    }
+
+    if ($method === 'POST' && $action === 'logout') {
+        handle_logout();
+    }
+
+    if ($method === 'POST' && ($action === 'forgot_password' || $action === 'forgot-password')) {
+        handle_forgot_password($payload);
+    }
+
+    if ($method === 'POST' && ($action === 'reset_password' || $action === 'reset-password')) {
+        handle_reset_password($payload);
+    }
+
+    if ($method === 'POST' && $action === 'update_profile') {
+        handle_update_profile($payload);
+    }
+
+    if ($method === 'POST' && $action === 'change_password') {
+        handle_change_password($payload);
+    }
+
+    if ($method === 'GET' && ($action === '' || $action === 'me')) {
+        handle_me();
+    }
+
+    json_response(
+        false,
+        'Invalid auth action.',
+        new stdClass(),
+        ['Use ?action=register, ?action=login, ?action=logout, ?action=forgot-password, ?action=reset-password, ?action=update_profile, ?action=change_password, or GET ?action=me.'],
+        400
+    );
+} catch (Throwable $exception) {
+    $user = current_user();
+    handle_exception($exception, 'Auth request failed', $user ? (int)$user['user_id'] : null);
+}
+
+function handle_register(array $payload): void
+{
+    require_fields($payload, ['full_name', 'email', 'password', 'role', 'contact_number']);
+
+    $fullName = trim((string)$payload['full_name']);
+    $email = strtolower(trim((string)$payload['email']));
+    $password = (string)$payload['password'];
+    $role = strtolower(trim((string)$payload['role']));
+    $contactNumber = trim((string)$payload['contact_number']);
+    $emergencyContactName = trim((string)($payload['emergency_contact_name'] ?? ''));
+    $emergencyContactNumber = trim((string)($payload['emergency_contact_number'] ?? ''));
+    $schoolOrWorkplace = trim((string)($payload['school_or_workplace'] ?? ''));
+
+    $errors = [];
+    if ($fullName === '') {
+        $errors[] = 'full_name is required.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'email must be a valid email address.';
+    }
+    if (strlen($password) < 8) {
+        $errors[] = 'password must be at least 8 characters.';
+    }
+    if (!in_array($role, ['seeker', 'parent', 'owner'], true)) {
+        $errors[] = 'role must be seeker, parent, or owner.';
+    }
+    if ($contactNumber === '') {
+        $errors[] = 'contact_number is required.';
+    }
+    if ($emergencyContactName !== '' && strlen($emergencyContactName) > 100) {
+        $errors[] = 'emergency_contact_name cannot exceed 100 characters.';
+    }
+    if ($emergencyContactNumber !== '' && strlen($emergencyContactNumber) > 20) {
+        $errors[] = 'emergency_contact_number cannot exceed 20 characters.';
+    }
+    if ($schoolOrWorkplace !== '' && strlen($schoolOrWorkplace) > 150) {
+        $errors[] = 'school_or_workplace cannot exceed 150 characters.';
+    }
+
+    if (!empty($errors)) {
+        json_response(false, 'Validation failed.', new stdClass(), $errors, 400);
+    }
+
+    $existing = db()->prepare('SELECT user_id, auth_provider FROM users WHERE email = :email LIMIT 1');
+    $existing->execute([':email' => $email]);
+    $existingUser = $existing->fetch();
+    if ($existingUser) {
+        if (strtolower((string)($existingUser['auth_provider'] ?? 'local')) === 'google') {
+            json_response(
+                false,
+                'Email is registered with Google.',
+                new stdClass(),
+                ['This email is registered with Google. Please use the Sign in with Google button.'],
+                409
+            );
+        }
+
+        json_response(false, 'Validation failed.', new stdClass(), ['email is already registered.'], 400);
+    }
+
+    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+    try {
+        db()->beginTransaction();
+
+        $insert = db()->prepare(
+            'INSERT INTO users (
+                full_name,
+                email,
+                password_hash,
+                role,
+                contact_number,
+                account_status,
+                email_verified,
+                emergency_contact_name,
+                emergency_contact_number,
+                school_or_workplace,
+                created_at
+             ) VALUES (
+                :full_name,
+                :email,
+                :password_hash,
+                :role,
+                :contact_number,
+                :account_status,
+                1,
+                :emergency_contact_name,
+                :emergency_contact_number,
+                :school_or_workplace,
+                NOW()
+             )'
+        );
+        $insert->execute([
+            ':full_name' => $fullName,
+            ':email' => $email,
+            ':password_hash' => $passwordHash,
+            ':role' => $role,
+            ':contact_number' => $contactNumber,
+            ':account_status' => 'active',
+            ':emergency_contact_name' => $emergencyContactName !== '' ? $emergencyContactName : null,
+            ':emergency_contact_number' => $emergencyContactNumber !== '' ? $emergencyContactNumber : null,
+            ':school_or_workplace' => $schoolOrWorkplace !== '' ? $schoolOrWorkplace : null,
+        ]);
+
+        $newUserId = (int)db()->lastInsertId();
+        if (isset($_FILES['profile_photo']) && is_array($_FILES['profile_photo'])) {
+            $profilePhotoPath = store_uploaded_file(
+                $_FILES['profile_photo'],
+                'storage/profiles/' . $newUserId,
+                [
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                ],
+                2 * 1024 * 1024,
+                'profile_photo'
+            );
+
+            $photoUpdate = db()->prepare('UPDATE users SET profile_photo = :profile_photo WHERE user_id = :user_id');
+            $photoUpdate->execute([
+                ':profile_photo' => $profilePhotoPath,
+                ':user_id' => $newUserId,
+            ]);
+        }
+
+        db()->commit();
+    } catch (Throwable $exception) {
+        if (db()->inTransaction()) {
+            db()->rollBack();
+        }
+        throw $exception;
+    }
+
+    $user = find_user_by_id($newUserId);
+    log_activity($newUserId, 'User registered', 'auth');
+
+    json_response(true, 'User registered successfully.', sanitize_user($user ?? ['user_id' => $newUserId]), [], 201);
+}
+
+function handle_login(array $payload): void
+{
+    require_fields($payload, ['email', 'password']);
+
+    $email = strtolower(trim((string)$payload['email']));
+    $password = (string)$payload['password'];
+    $rememberMe = filter_var($payload['remember_me'] ?? ($payload['remember'] ?? false), FILTER_VALIDATE_BOOLEAN);
+    $selectedRole = strtolower(trim((string)($payload['role'] ?? '')));
+
+    if ($selectedRole !== '' && !in_array($selectedRole, ['seeker', 'parent', 'owner', 'admin'], true)) {
+        json_response(false, 'Validation failed.', new stdClass(), ['role must be seeker, parent, owner, or admin.'], 400);
+    }
+
+    $query = db()->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
+    $query->execute([':email' => $email]);
+    $user = $query->fetch();
+    $storedRole = $user ? strtolower((string)($user['role'] ?? '')) : '';
+    $roleMatches = $selectedRole === '' || $storedRole === $selectedRole;
+    $passwordHash = $user ? trim((string)($user['password_hash'] ?? '')) : '';
+
+    if ($user && strtolower((string)($user['auth_provider'] ?? 'local')) === 'google' && $passwordHash === '') {
+        log_activity((int)$user['user_id'], "Blocked password login for Google-only account: {$email}", 'auth', 'warning');
+        json_response(
+            false,
+            'Use Google sign-in or set a RentEase password.',
+            new stdClass(),
+            ['This Google account does not have a RentEase password yet. Use Continue with Google first, then set a password in Profile.'],
+            400
+        );
+    }
+
+    $isValid = $user
+        && $passwordHash !== ''
+        && password_verify($password, $passwordHash)
+        && ($user['account_status'] ?? 'inactive') === 'active'
+        && $roleMatches;
+
+    if (!$isValid) {
+        log_activity(
+            $user && isset($user['user_id']) ? (int)$user['user_id'] : null,
+            "Failed login attempt for email: {$email}",
+            'auth',
+            'warning'
+        );
+
+        json_response(false, 'Invalid credentials.', new stdClass(), ['Email or password is incorrect.'], 401);
+    }
+
+    if (db_column_exists('users', 'last_login_at')) {
+        $lastLogin = db()->prepare('UPDATE users SET last_login_at = NOW() WHERE user_id = :user_id');
+        $lastLogin->execute([':user_id' => (int)$user['user_id']]);
+        $user['last_login_at'] = date('Y-m-d H:i:s');
+    }
+
+    login_user($user);
+    if ($rememberMe) {
+        issue_remember_token((int)$user['user_id']);
+    }
+    log_activity((int)$user['user_id'], 'User logged in', 'auth', 'info');
+
+    json_response(true, 'Login successful.', sanitize_user($user), []);
+}
+
+function handle_forgot_password(array $payload): void
+{
+    $email = strtolower(trim((string)($payload['email'] ?? '')));
+    $message = 'If an account with that email exists, a reset link has been sent.';
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        json_response(true, $message, new stdClass(), []);
+    }
+
+    $query = db()->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
+    $query->execute([':email' => $email]);
+    $user = $query->fetch();
+
+    if (!$user) {
+        json_response(true, $message, new stdClass(), []);
+    }
+
+    $provider = strtolower((string)($user['auth_provider'] ?? 'local'));
+    $passwordHash = trim((string)($user['password_hash'] ?? ''));
+    if ($provider === 'google' && $passwordHash === '') {
+        log_activity((int)$user['user_id'], 'Password reset skipped for Google-only account', 'auth', 'info');
+        json_response(true, $message, new stdClass(), []);
+    }
+
+    $rawToken = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $rawToken);
+    $expiresAt = date('Y-m-d H:i:s', time() + 3600);
+
+    $delete = db()->prepare('DELETE FROM password_reset_tokens WHERE email = :email');
+    $delete->execute([':email' => $email]);
+
+    $insert = db()->prepare(
+        'INSERT INTO password_reset_tokens (email, token_hash, expires_at, created_at)
+         VALUES (:email, :token_hash, :expires_at, NOW())'
+    );
+    $insert->execute([
+        ':email' => $email,
+        ':token_hash' => $tokenHash,
+        ':expires_at' => $expiresAt,
+    ]);
+
+    $frontendUrl = rtrim(config_value('RENTEASE_FRONTEND_URL', 'http://localhost:5173', ['FRONTEND_URL']), '/');
+    $resetLink = $frontendUrl . '/reset-password?token=' . urlencode($rawToken);
+
+    try {
+        send_password_reset_email($email, $resetLink);
+        log_activity((int)$user['user_id'], 'Password reset email requested', 'auth', 'warning');
+    } catch (Throwable $exception) {
+        log_error('MAIL_RESET_FAILED', 'Password reset email could not be sent.', (int)$user['user_id'], $exception);
+    }
+
+    json_response(true, $message, new stdClass(), []);
+}
+
+function handle_reset_password(array $payload): void
+{
+    $token = trim((string)($payload['token'] ?? ''));
+    $password = (string)($payload['password'] ?? '');
+    $confirmPassword = (string)($payload['confirm_password'] ?? '');
+
+    $errors = [];
+    if (!preg_match('/^[a-f0-9]{64}$/i', $token)) {
+        $errors[] = 'Reset link is invalid.';
+    }
+    if (strlen($password) < 8) {
+        $errors[] = 'password must be at least 8 characters.';
+    }
+    if (!preg_match('/[A-Z]/', $password) || !preg_match('/\d/', $password)) {
+        $errors[] = 'password must include at least one uppercase letter and one number.';
+    }
+    if ($confirmPassword !== '' && $password !== $confirmPassword) {
+        $errors[] = 'confirm_password must match password.';
+    }
+    if (!empty($errors)) {
+        json_response(false, 'Validation failed.', new stdClass(), $errors, 400);
+    }
+
+    $tokenHash = hash('sha256', $token);
+    $query = db()->prepare(
+        'SELECT * FROM password_reset_tokens
+         WHERE token_hash = :token_hash AND expires_at > NOW()
+         LIMIT 1'
+    );
+    $query->execute([':token_hash' => $tokenHash]);
+    $record = $query->fetch();
+
+    if (!$record) {
+        json_response(false, 'Reset link is invalid or expired.', new stdClass(), ['Please request a new reset link.'], 400);
+    }
+
+    $userQuery = db()->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
+    $userQuery->execute([':email' => $record['email']]);
+    $user = $userQuery->fetch();
+    if (!$user) {
+        json_response(false, 'Reset link is invalid or expired.', new stdClass(), ['Please request a new reset link.'], 400);
+    }
+
+    $provider = strtolower((string)($user['auth_provider'] ?? 'local'));
+    $passwordHash = trim((string)($user['password_hash'] ?? ''));
+    if ($provider === 'google' && $passwordHash === '') {
+        json_response(false, 'Use Google sign-in.', new stdClass(), ['This account uses Google authentication.'], 400);
+    }
+
+    $update = db()->prepare('UPDATE users SET password_hash = :password_hash, auth_provider = :auth_provider WHERE user_id = :user_id');
+    $update->execute([
+        ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        ':auth_provider' => 'local',
+        ':user_id' => (int)$user['user_id'],
+    ]);
+
+    $delete = db()->prepare('DELETE FROM password_reset_tokens WHERE token_hash = :token_hash OR email = :email');
+    $delete->execute([
+        ':token_hash' => $tokenHash,
+        ':email' => $record['email'],
+    ]);
+    revoke_remember_tokens_for_user((int)$user['user_id']);
+
+    log_activity((int)$user['user_id'], 'Password reset successfully', 'auth', 'warning');
+    json_response(true, 'Password updated. You can now log in.', new stdClass(), []);
+}
+
+function handle_update_profile(array $payload): void
+{
+    $actor = require_auth();
+    $userId = (int)$actor['user_id'];
+
+    $updates = [];
+    $params = [':user_id' => $userId];
+    $currentPasswordHash = trim((string)($actor['password_hash'] ?? ''));
+    $isGoogleUser = strtolower((string)($actor['auth_provider'] ?? 'local')) === 'google';
+    $isFreshGoogleProfile = strtolower((string)($actor['auth_provider'] ?? 'local')) === 'google'
+        && strtolower((string)($actor['role'] ?? '')) === 'seeker'
+        && trim((string)($actor['contact_number'] ?? '')) === '';
+    $canSetInitialGooglePassword = $isGoogleUser && $currentPasswordHash === '';
+
+    if (array_key_exists('role', $payload)) {
+        $role = strtolower(trim((string)$payload['role']));
+        if (!in_array($role, ['seeker', 'parent', 'owner'], true)) {
+            json_response(false, 'Validation failed.', new stdClass(), ['role must be seeker, parent, or owner.'], 400);
+        }
+
+        if (!$isFreshGoogleProfile) {
+            json_response(false, 'Role update is not allowed.', new stdClass(), ['Role can only be selected during Google profile completion.'], 403);
+        }
+
+        $updates[] = 'role = :role';
+        $params[':role'] = $role;
+    }
+
+    if (array_key_exists('password', $payload) || array_key_exists('new_password', $payload)) {
+        $password = (string)($payload['password'] ?? $payload['new_password'] ?? '');
+        $confirmPassword = (string)($payload['confirm_password'] ?? $password);
+
+        if (!$canSetInitialGooglePassword) {
+            json_response(false, 'Password setup is not allowed here.', new stdClass(), ['Use the Change Password form from your profile.'], 403);
+        }
+        if (strlen($password) < 8) {
+            json_response(false, 'Validation failed.', new stdClass(), ['password must be at least 8 characters.'], 400);
+        }
+        if ($password !== $confirmPassword) {
+            json_response(false, 'Validation failed.', new stdClass(), ['confirm_password must match password.'], 400);
+        }
+
+        $updates[] = 'password_hash = :password_hash';
+        $params[':password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+    }
+
+    if (
+        $isFreshGoogleProfile
+        && $currentPasswordHash === ''
+        && array_key_exists('contact_number', $payload)
+        && !array_key_exists('password', $payload)
+        && !array_key_exists('new_password', $payload)
+    ) {
+        json_response(false, 'Validation failed.', new stdClass(), ['password is required for Google profile completion.'], 400);
+    }
+
+    if (array_key_exists('full_name', $payload)) {
+        $fullName = trim((string)$payload['full_name']);
+        if ($fullName === '') {
+            json_response(false, 'Validation failed.', new stdClass(), ['full_name must not be empty.'], 400);
+        }
+
+        $updates[] = 'full_name = :full_name';
+        $params[':full_name'] = $fullName;
+    }
+
+    if (array_key_exists('email', $payload)) {
+        $email = strtolower(trim((string)$payload['email']));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            json_response(false, 'Validation failed.', new stdClass(), ['email must be a valid email address.'], 400);
+        }
+
+        $duplicate = db()->prepare('SELECT user_id FROM users WHERE email = :email AND user_id <> :user_id LIMIT 1');
+        $duplicate->execute([
+            ':email' => $email,
+            ':user_id' => $userId,
+        ]);
+        if ($duplicate->fetch()) {
+            json_response(false, 'Validation failed.', new stdClass(), ['email is already in use by another account.'], 400);
+        }
+
+        $updates[] = 'email = :email';
+        $params[':email'] = $email;
+    }
+
+    if (array_key_exists('contact_number', $payload)) {
+        $contactNumber = trim((string)$payload['contact_number']);
+        if ($contactNumber === '') {
+            json_response(false, 'Validation failed.', new stdClass(), ['contact_number must not be empty.'], 400);
+        }
+        if (strlen($contactNumber) > 20) {
+            json_response(false, 'Validation failed.', new stdClass(), ['contact_number cannot exceed 20 characters.'], 400);
+        }
+
+        $updates[] = 'contact_number = :contact_number';
+        $params[':contact_number'] = $contactNumber;
+    }
+
+    if (array_key_exists('school_or_workplace', $payload)) {
+        $schoolOrWorkplace = trim((string)$payload['school_or_workplace']);
+        if (strlen($schoolOrWorkplace) > 150) {
+            json_response(false, 'Validation failed.', new stdClass(), ['school_or_workplace cannot exceed 150 characters.'], 400);
+        }
+
+        $updates[] = 'school_or_workplace = :school_or_workplace';
+        $params[':school_or_workplace'] = $schoolOrWorkplace !== '' ? $schoolOrWorkplace : null;
+    }
+
+    if (array_key_exists('emergency_contact_name', $payload)) {
+        $emergencyName = trim((string)$payload['emergency_contact_name']);
+        if (strlen($emergencyName) > 100) {
+            json_response(false, 'Validation failed.', new stdClass(), ['emergency_contact_name cannot exceed 100 characters.'], 400);
+        }
+
+        $updates[] = 'emergency_contact_name = :emergency_contact_name';
+        $params[':emergency_contact_name'] = $emergencyName !== '' ? $emergencyName : null;
+    }
+
+    if (array_key_exists('emergency_contact_number', $payload)) {
+        $emergencyNumber = trim((string)$payload['emergency_contact_number']);
+        if (strlen($emergencyNumber) > 20) {
+            json_response(false, 'Validation failed.', new stdClass(), ['emergency_contact_number cannot exceed 20 characters.'], 400);
+        }
+
+        $updates[] = 'emergency_contact_number = :emergency_contact_number';
+        $params[':emergency_contact_number'] = $emergencyNumber !== '' ? $emergencyNumber : null;
+    }
+
+    if (isset($_FILES['profile_photo']) && is_array($_FILES['profile_photo'])) {
+        $profilePhotoPath = store_uploaded_file(
+            $_FILES['profile_photo'],
+            'storage/profiles/' . $userId,
+            [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+            ],
+            2 * 1024 * 1024,
+            'profile_photo'
+        );
+
+        $updates[] = 'profile_photo = :profile_photo';
+        $params[':profile_photo'] = $profilePhotoPath;
+    }
+
+    if (empty($updates)) {
+        json_response(false, 'Validation failed.', new stdClass(), ['No updatable profile fields were provided.'], 400);
+    }
+
+    $query = db()->prepare('UPDATE users SET ' . implode(', ', $updates) . ' WHERE user_id = :user_id');
+    $query->execute($params);
+
+    current_user(true);
+    $user = find_user_by_id($userId);
+    if ($user === null) {
+        json_response(false, 'User not found after update.', new stdClass(), [], 404);
+    }
+
+    log_activity($userId, 'Updated profile information', 'auth');
+    json_response(true, 'Profile updated successfully.', sanitize_user($user), []);
+}
+
+function handle_change_password(array $payload): void
+{
+    $actor = require_auth();
+    require_fields($payload, ['new_password']);
+
+    $currentPassword = (string)($payload['current_password'] ?? '');
+    $newPassword = (string)$payload['new_password'];
+    $confirmPassword = (string)($payload['confirm_password'] ?? $newPassword);
+
+    if (strlen($newPassword) < 8) {
+        json_response(false, 'Validation failed.', new stdClass(), ['new_password must be at least 8 characters.'], 400);
+    }
+    if ($newPassword !== $confirmPassword) {
+        json_response(false, 'Validation failed.', new stdClass(), ['confirm_password must match new_password.'], 400);
+    }
+
+    $currentHash = trim((string)($actor['password_hash'] ?? ''));
+    $isInitialGooglePassword = strtolower((string)($actor['auth_provider'] ?? 'local')) === 'google'
+        && $currentHash === '';
+
+    if (!$isInitialGooglePassword && $currentPassword === '') {
+        json_response(false, 'Validation failed.', new stdClass(), ['current_password is required.'], 400);
+    }
+
+    if (!$isInitialGooglePassword && !password_verify($currentPassword, $currentHash)) {
+        log_activity((int)$actor['user_id'], 'Failed password change attempt', 'auth');
+        json_response(false, 'Validation failed.', new stdClass(), ['current_password is incorrect.'], 400);
+    }
+
+    if (!$isInitialGooglePassword && password_verify($newPassword, $currentHash)) {
+        json_response(false, 'Validation failed.', new stdClass(), ['new_password must be different from current_password.'], 400);
+    }
+
+    $query = db()->prepare('UPDATE users SET password_hash = :password_hash WHERE user_id = :user_id');
+    $query->execute([
+        ':password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+        ':user_id' => (int)$actor['user_id'],
+    ]);
+
+    current_user(true);
+    log_activity((int)$actor['user_id'], $isInitialGooglePassword ? 'Set RentEase password' : 'Changed password', 'auth');
+    json_response(true, $isInitialGooglePassword ? 'RentEase password set successfully.' : 'Password updated successfully.', new stdClass(), []);
+}
+
+function handle_me(): void
+{
+    $user = require_auth();
+    json_response(true, 'Current user profile fetched.', sanitize_user($user), []);
+}
+
+function handle_logout(): void
+{
+    $user = require_auth();
+    $userId = (int)$user['user_id'];
+    revoke_remember_tokens_for_user($userId);
+    clear_remember_cookie();
+    logout_user();
+    log_activity($userId, 'User logout', 'auth');
+
+    json_response(true, 'Logout successful.', new stdClass(), []);
+}
