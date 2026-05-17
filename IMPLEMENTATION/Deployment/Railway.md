@@ -155,12 +155,21 @@ Step 3 is done when:
 
 ## Step 4: Add MySQL
 
-1. In the project canvas, click `New`.
+1. In the `RentEase Production` project canvas, click `New`.
 2. Choose `Database`.
-3. Select `MySQL`.
-4. Rename the service to `rentease-mysql`.
-5. Wait until the database deployment is active.
-6. Open the MySQL service variables and note these values:
+3. Choose `Add MySQL`.
+4. Wait until Railway creates the database service.
+5. Click the MySQL service.
+6. Open the service settings or service name menu.
+7. Rename the MySQL service exactly to:
+
+```text
+rentease-mysql
+```
+
+8. Wait until the MySQL service shows as active or deployed.
+9. Open the MySQL service `Variables` tab.
+10. Confirm Railway generated these variables:
    - `MYSQLHOST`
    - `MYSQLPORT`
    - `MYSQLUSER`
@@ -170,27 +179,84 @@ Step 3 is done when:
 
 Use Railway's generated values. Do not use the local Docker values like `root`, `rentease`, or port `3308` in production.
 
+Step 4 is done when the project has one active service named `rentease-mysql`.
+
 ## Step 5: Deploy the backend service
 
-1. Click `New`.
+1. In the same `RentEase Production` project canvas, click `New`.
 2. Choose `GitHub Repo`.
-3. Select the RentEase repository.
-4. Rename the service to `rentease-backend`.
-5. In service settings, configure the source:
-   - Root directory: `/`
-   - Dockerfile path variable: `RAILWAY_DOCKERFILE_PATH=docker/backend/Dockerfile`
-6. Confirm the Dockerfile copies backend source files into the image before final production deploy.
-7. Set public networking:
-   - Generate a Railway domain.
-   - Save the backend URL.
+3. Select:
 
-Backend service variables:
+```text
+gabrielryanpduterte-cyber/RENTEASE-SYSTEM
+```
+
+4. If Railway asks which branch to deploy, choose:
+
+```text
+main
+```
+
+5. After Railway creates the service, click the new service.
+6. Rename the service exactly to:
+
+```text
+rentease-backend
+```
+
+7. Open `Settings`.
+8. Set the root directory to:
+
+```text
+/
+```
+
+9. Set the Dockerfile path to:
+
+```text
+docker/backend/Dockerfile
+```
+
+10. If your Railway screen does not show a Dockerfile path field, open the `Variables` tab and add this variable:
+
+```env
+RAILWAY_DOCKERFILE_PATH=docker/backend/Dockerfile
+```
+
+11. Open `Networking`.
+12. Click `Generate Domain`.
+13. Copy the generated backend URL.
+
+Write the backend URL here before continuing:
+
+```text
+BACKEND_URL=https://PASTE_BACKEND_DOMAIN_HERE
+```
+
+Example format only:
+
+```text
+BACKEND_URL=https://rentease-backend-production.up.railway.app
+```
+
+Do not use the example value unless Railway actually gives you that exact URL.
+
+### Backend variables to copy and paste
+
+Before pasting, replace:
+
+1. `https://PASTE_BACKEND_DOMAIN_HERE` with your generated backend URL.
+2. `https://PASTE_FRONTEND_DOMAIN_HERE` with your generated frontend URL after Step 6.
+
+If you have not created the frontend service yet, paste the block now with `https://PASTE_FRONTEND_DOMAIN_HERE`, then come back and replace it after Step 6.
+
+Paste this into the `rentease-backend` service `Variables` tab:
 
 ```env
 RENTEASE_APP_NAME=RentEase
 RENTEASE_APP_ENV=production
-RENTEASE_APP_URL=https://YOUR_BACKEND_DOMAIN
-RENTEASE_FRONTEND_URL=https://YOUR_FRONTEND_DOMAIN
+RENTEASE_APP_URL=https://PASTE_BACKEND_DOMAIN_HERE
+RENTEASE_FRONTEND_URL=https://PASTE_FRONTEND_DOMAIN_HERE
 
 RENTEASE_DB_HOST=${{rentease-mysql.MYSQLHOST}}
 RENTEASE_DB_PORT=${{rentease-mysql.MYSQLPORT}}
@@ -198,26 +264,30 @@ RENTEASE_DB_NAME=${{rentease-mysql.MYSQLDATABASE}}
 RENTEASE_DB_USER=${{rentease-mysql.MYSQLUSER}}
 RENTEASE_DB_PASS=${{rentease-mysql.MYSQLPASSWORD}}
 
-RENTEASE_ALLOWED_ORIGINS=https://YOUR_FRONTEND_DOMAIN
+RENTEASE_ALLOWED_ORIGINS=https://PASTE_FRONTEND_DOMAIN_HERE
 RENTEASE_COOKIE_SAMESITE=Lax
 RENTEASE_COOKIE_DOMAIN=
 
 GOOGLE_OAUTH_ENABLED=false
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=https://YOUR_FRONTEND_DOMAIN/auth/google/callback
+GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
 ```
 
-If you enable Google later, set:
+Optional Google OAuth backend variables for later.
+
+Do not paste this until Google OAuth is fully configured in Google Cloud:
 
 ```env
 GOOGLE_OAUTH_ENABLED=true
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=https://YOUR_FRONTEND_DOMAIN/auth/google/callback
+GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
 ```
 
-For email sending later:
+Optional Gmail SMTP backend variables for later.
+
+Do not paste a Gmail app password into GitHub. Only paste it into Railway variables:
 
 ```env
 MAIL_HOST=smtp.gmail.com
@@ -228,49 +298,148 @@ MAIL_FROM_NAME=RentEase
 MAIL_FROM_ADDRESS=renteasesupport@gmail.com
 ```
 
+Step 5 is done when:
+
+1. The backend service is named `rentease-backend`.
+2. The backend service uses repo branch `main`.
+3. The backend root directory is `/`.
+4. The backend Dockerfile path is `docker/backend/Dockerfile`.
+5. The backend has a generated public Railway URL.
+6. The backend variables are pasted.
+
 ## Step 6: Deploy the frontend service
 
-1. Click `New`.
-2. Choose the same GitHub repository.
-3. Rename the service to `rentease-frontend`.
-4. In service settings:
-   - Root directory: `/frontend`
-   - Build command: `npm ci && npm run build`
-   - Start command: `npm run preview -- --host 0.0.0.0 --port $PORT`
-5. Generate a public Railway domain.
-6. Copy the frontend URL and place it in the backend variable `RENTEASE_FRONTEND_URL`.
+1. In the same `RentEase Production` project canvas, click `New`.
+2. Choose `GitHub Repo`.
+3. Select the same repository:
 
-Frontend service variables:
+```text
+gabrielryanpduterte-cyber/RENTEASE-SYSTEM
+```
+
+4. If Railway asks which branch to deploy, choose:
+
+```text
+main
+```
+
+5. After Railway creates the service, click the new service.
+6. Rename the service exactly to:
+
+```text
+rentease-frontend
+```
+
+7. Open `Settings`.
+8. Set the root directory to:
+
+```text
+/frontend
+```
+
+9. Set the build command to:
+
+```bash
+npm ci && npm run build
+```
+
+10. Set the start command to:
+
+```bash
+npm run preview -- --host 0.0.0.0 --port $PORT
+```
+
+11. Open `Networking`.
+12. Click `Generate Domain`.
+13. Copy the generated frontend URL.
+
+Write the frontend URL here:
+
+```text
+FRONTEND_URL=https://PASTE_FRONTEND_DOMAIN_HERE
+```
+
+Example format only:
+
+```text
+FRONTEND_URL=https://rentease-production.up.railway.app
+```
+
+Do not use the example value unless Railway actually gives you that exact URL.
+
+### Frontend variables to copy and paste
+
+Before pasting, replace:
+
+1. `https://PASTE_BACKEND_DOMAIN_HERE` with your generated backend URL.
+2. `https://PASTE_FRONTEND_DOMAIN_HERE` with your generated frontend URL.
+
+Paste this into the `rentease-frontend` service `Variables` tab:
 
 ```env
-VITE_API_BASE_URL=https://YOUR_BACKEND_DOMAIN
+VITE_API_BASE_URL=https://PASTE_BACKEND_DOMAIN_HERE
 VITE_APP_ENV=production
 VITE_APP_NAME=RentEase
 VITE_ENABLE_GOOGLE_AUTH=false
 VITE_GOOGLE_CLIENT_ID=
-VITE_GOOGLE_REDIRECT_URI=https://YOUR_FRONTEND_DOMAIN/auth/google/callback
+VITE_GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
 ```
 
-If you enable Google later:
+Optional Google OAuth frontend variables for later.
+
+Do not paste this until Google OAuth is fully configured in Google Cloud:
 
 ```env
 VITE_ENABLE_GOOGLE_AUTH=true
 VITE_GOOGLE_CLIENT_ID=your-google-client-id
-VITE_GOOGLE_REDIRECT_URI=https://YOUR_FRONTEND_DOMAIN/auth/google/callback
+VITE_GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
 ```
+
+Step 6 is done when:
+
+1. The frontend service is named `rentease-frontend`.
+2. The frontend service uses repo branch `main`.
+3. The frontend root directory is `/frontend`.
+4. The frontend build command is `npm ci && npm run build`.
+5. The frontend start command is `npm run preview -- --host 0.0.0.0 --port $PORT`.
+6. The frontend has a generated public Railway URL.
+7. The frontend variables are pasted.
 
 ## Step 7: Configure public domains
 
+After both services have public Railway domains, update the variables one final time.
+
+Fill this in first:
+
+```text
+BACKEND_URL=https://PASTE_BACKEND_DOMAIN_HERE
+FRONTEND_URL=https://PASTE_FRONTEND_DOMAIN_HERE
+```
+
+Then update `rentease-backend` variables:
+
+```env
+RENTEASE_APP_URL=https://PASTE_BACKEND_DOMAIN_HERE
+RENTEASE_FRONTEND_URL=https://PASTE_FRONTEND_DOMAIN_HERE
+RENTEASE_ALLOWED_ORIGINS=https://PASTE_FRONTEND_DOMAIN_HERE
+GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
+```
+
+Then update `rentease-frontend` variables:
+
+```env
+VITE_API_BASE_URL=https://PASTE_BACKEND_DOMAIN_HERE
+VITE_GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
+```
+
+After editing variables, redeploy both services:
+
 1. Open `rentease-backend`.
-2. Go to `Settings`.
-3. Under networking, click `Generate Domain`.
-4. Repeat for `rentease-frontend`.
-5. Update variables after both domains exist:
-   - Backend `RENTEASE_APP_URL`
-   - Backend `RENTEASE_FRONTEND_URL`
-   - Backend `RENTEASE_ALLOWED_ORIGINS`
-   - Frontend `VITE_API_BASE_URL`
-   - Frontend `VITE_GOOGLE_REDIRECT_URI`
+2. Click `Deployments`.
+3. Redeploy the latest deployment.
+4. Open `rentease-frontend`.
+5. Click `Deployments`.
+6. Redeploy the latest deployment.
 
 If you use a custom domain later:
 
