@@ -165,8 +165,8 @@ function google_profile_inputs(array $payload, string $fallbackName, bool $requi
     $confirmPassword = (string)($payload['confirm_password'] ?? $password);
 
     $errors = [];
-    if (!in_array($role, ['seeker', 'parent', 'owner'], true)) {
-        $errors[] = 'role must be seeker, parent, or owner.';
+    if (!in_array($role, ['seeker', 'owner'], true)) {
+        $errors[] = 'role must be seeker or owner.';
     }
     if ($fullName === '') {
         $errors[] = 'full_name must not be empty.';

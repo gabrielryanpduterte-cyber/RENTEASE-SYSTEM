@@ -18,11 +18,6 @@ const GOOGLE_PROFILE_ROLES = [
     label: 'Landlord',
     description: 'List and manage rooms.',
   },
-  {
-    value: 'parent',
-    label: 'Parent',
-    description: 'Monitor a linked seeker.',
-  },
 ];
 
 function CompleteProfilePage() {
@@ -69,7 +64,7 @@ function CompleteProfilePage() {
 
     queueMicrotask(() => {
       setForm({
-        role: ['seeker', 'owner', 'parent'].includes(user.role) ? user.role : 'seeker',
+        role: ['seeker', 'owner'].includes(user.role) ? user.role : 'seeker',
         full_name: user.full_name || '',
         contact_number: user.contact_number || '',
         school_or_workplace: user.school_or_workplace || '',
@@ -172,13 +167,13 @@ function CompleteProfilePage() {
             RentEase
           </Link>
           <h1>Complete your RentEase profile.</h1>
-          <p>Google verified your email. Choose the role you need, then add your local contact details.</p>
+          <p>Google verified your email. Choose how you will use RentEase, then add your local contact details.</p>
           <ul>
             <li>
               <CheckCircle2 size={18} /> Google account verified
             </li>
             <li>
-              <CheckCircle2 size={18} /> Seeker, landlord, and parent profiles supported
+              <CheckCircle2 size={18} /> Seeker and landlord profiles supported
             </li>
           </ul>
         </div>

@@ -82,8 +82,8 @@ function handle_register(array $payload): void
     if (strlen($password) < 8) {
         $errors[] = 'password must be at least 8 characters.';
     }
-    if (!in_array($role, ['seeker', 'parent', 'owner'], true)) {
-        $errors[] = 'role must be seeker, parent, or owner.';
+    if (!in_array($role, ['seeker', 'owner'], true)) {
+        $errors[] = 'role must be seeker or owner.';
     }
     if ($contactNumber === '') {
         $errors[] = 'contact_number is required.';
@@ -398,8 +398,8 @@ function handle_update_profile(array $payload): void
 
     if (array_key_exists('role', $payload)) {
         $role = strtolower(trim((string)$payload['role']));
-        if (!in_array($role, ['seeker', 'parent', 'owner'], true)) {
-            json_response(false, 'Validation failed.', new stdClass(), ['role must be seeker, parent, or owner.'], 400);
+        if (!in_array($role, ['seeker', 'owner'], true)) {
+            json_response(false, 'Validation failed.', new stdClass(), ['role must be seeker or owner.'], 400);
         }
 
         if (!$isFreshGoogleProfile) {

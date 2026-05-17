@@ -12,7 +12,6 @@ import { IMAGE_UPLOAD_ACCEPT, prepareUploadFile } from '../utils/imageUpload.js'
 
 const registerRoles = [
   { value: 'seeker', label: 'Seeker' },
-  { value: 'parent', label: 'Parent' },
   { value: 'owner', label: 'Landlord' },
 ];
 
@@ -178,8 +177,7 @@ function RegisterPage() {
   }
 
   const roleHint = {
-    seeker: 'Find and reserve available boarding house rooms.',
-    parent: 'Link to a seeker account and view room or rent status.',
+    seeker: 'Find rooms and share guardian access links when needed.',
     owner: 'Manage rooms, reservations, tenants, and reports.',
   }[form.role];
 
@@ -195,14 +193,14 @@ function RegisterPage() {
           </Link>
           <h1>Start with a role built for your housing workflow.</h1>
           <p>
-            Create a student, parent, or landlord account and continue into the right dashboard.
+            Create a student or landlord account and continue into the right dashboard.
           </p>
           <ul>
             <li>
               <CheckCircle2 size={18} /> Student room reservations
             </li>
             <li>
-              <CheckCircle2 size={18} /> Parent monitoring access
+              <CheckCircle2 size={18} /> Guardian access links from seeker accounts
             </li>
             <li>
               <CheckCircle2 size={18} /> Landlord room management
@@ -217,7 +215,7 @@ function RegisterPage() {
             <p className="re-eyebrow">Create account</p>
           </div>
           <h2>Register</h2>
-          <p>Create a student, parent, or landlord account to continue.</p>
+          <p>Create a student or landlord account to continue.</p>
 
           <form onSubmit={onSubmit} className="re-form-stack">
             <div className="re-role-tabs" role="tablist" aria-label="Registration role">
