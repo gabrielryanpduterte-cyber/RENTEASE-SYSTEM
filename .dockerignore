@@ -1,6 +1,9 @@
 .git
 .idea
 .amazonq
+.env
+**/.env
+**/.env.local
 frontend/node_modules
 frontend/dist
 backend/vendor

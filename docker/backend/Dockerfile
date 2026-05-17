@@ -18,4 +18,6 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+COPY backend/ /var/www/html/
+
 CMD ["bash", "-lc", "composer install --no-interaction && mkdir -p storage/uploads storage/private/proofs storage/private/ids storage/public/rooms storage/public/boarding_houses storage/profiles && chown -R www-data:www-data storage || true; apache2-foreground"]
