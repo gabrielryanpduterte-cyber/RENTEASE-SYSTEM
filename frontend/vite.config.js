@@ -45,6 +45,7 @@ export default defineConfig({
     },
   },
   preview: {
+    allowedHosts: ['.up.railway.app'],
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
     },
