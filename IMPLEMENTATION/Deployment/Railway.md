@@ -44,6 +44,13 @@ Before deploying the backend to Railway, make sure one of these is true:
 
 Do not skip this check. If the Docker image does not copy the backend code, Railway can build a PHP Apache container with no real app files inside it.
 
+Current RentEase repo status:
+
+1. The code has been pushed to `https://github.com/gabrielryanpduterte-cyber/RENTEASE-SYSTEM`.
+2. The backend Dockerfile now copies `backend/` into `/var/www/html`.
+3. `.dockerignore` excludes local `.env` and `.env.local` files.
+4. You are ready to create the Railway project and services.
+
 ## Step 1: Create the Railway account
 
 1. Go to `https://railway.com`.
@@ -60,6 +67,13 @@ Recommended account ownership:
 - Use `renteasesupport@gmail.com` as the long-term owner account.
 - Connect the GitHub account that owns the RentEase repository.
 - Do not deploy from a personal temporary email because production billing, alerts, and project access will depend on it.
+
+You are done with Step 1 when:
+
+1. You can see the Railway dashboard.
+2. The left sidebar shows `My Projects`.
+3. You can see the purple `+ New` button in the upper-right area.
+4. Railway shows your trial or usage status, such as `27 days or $5.00 left`.
 
 ## Step 2: Prepare GitHub
 
@@ -78,17 +92,66 @@ Recommended account ownership:
    - database password
 4. Keep `.env.example` files only as templates.
 
-## Step 3: Create the Railway project
+You are done with Step 2 when:
 
-1. In Railway dashboard, click `New Project`.
-2. Choose `Empty Project`.
-3. Rename the project to `RentEase Production`.
-4. Create three services:
-   - `rentease-mysql`
-   - `rentease-backend`
-   - `rentease-frontend`
+1. The repository exists on GitHub.
+2. The latest commit is pushed to the repository.
+3. GitHub did not block the push for secrets.
+4. The repo contains `backend/`, `frontend/`, `database/`, `docker/backend/Dockerfile`, and `docker-compose.yml`.
+5. The repo does not contain real `.env` files.
+
+For the current RentEase deployment, Step 2 is done.
+
+## Step 3: Create or choose the Railway project
+
+Your screenshot shows the correct Railway screen:
+
+- Left sidebar: `Projects` is selected.
+- Main page title: `Projects`.
+- Top-right button: purple `+ New`.
+- Project cards: some cards show `No services`.
+
+That means your account is already created and you are at the correct place to start Step 3.
+
+### Option A: Use an existing empty project from the screenshot
+
+Use this option if one of the project cards already shows `No services`.
+
+1. On the `Projects` page, click an empty project card.
+   - Example from your screenshot: a card like `attractive-transformation` or `fortunate-elegance`.
+2. Confirm the project canvas has no important services yet.
+3. Open the project settings.
+4. Rename the project to:
+   - `RentEase Production`
+5. Return to the project canvas.
+6. Continue to Step 4 and add the MySQL service.
+
+This is usually the best option if the project is empty because it avoids creating extra unused Railway projects.
+
+### Option B: Create a fresh project with the `+ New` button
+
+Use this option if you want a clean new project instead of using the existing empty cards.
+
+1. Stay on the `Projects` page shown in your screenshot.
+2. Click the purple `+ New` button in the upper-right area.
+3. Choose `Empty Project`.
+4. Wait for Railway to open the new empty project canvas.
+5. Open the project settings.
+6. Rename the project to:
+   - `RentEase Production`
+7. Return to the project canvas.
+8. Continue to Step 4 and add the MySQL service.
 
 Using an empty project first is better for this repo because RentEase is a monorepo with separate backend and frontend services.
+
+Do not choose a one-click template for this deployment. RentEase needs separate services for MySQL, backend, and frontend.
+
+Step 3 is done when:
+
+1. You are inside a Railway project named `RentEase Production`.
+2. The project canvas is empty or ready for new services.
+3. You have not deployed the repo yet.
+4. You are ready to create the first service: `rentease-mysql`.
 
 ## Step 4: Add MySQL
 
