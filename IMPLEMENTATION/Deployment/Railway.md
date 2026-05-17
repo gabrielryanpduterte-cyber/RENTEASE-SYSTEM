@@ -361,21 +361,47 @@ rentease-frontend
 /frontend
 ```
 
-9. Set the build command to:
+9. Use the frontend Dockerfile.
 
-```bash
-npm ci && npm run build
+Railway should auto-detect this file because the service root directory is `/frontend`:
+
+```text
+Dockerfile
 ```
 
-10. Set the start command to:
+If Railway does not auto-detect it, add this variable to `rentease-frontend`:
+
+```env
+RAILWAY_DOCKERFILE_PATH=Dockerfile
+```
+
+Do not use the backend Dockerfile in the frontend service.
+
+Wrong frontend variable:
+
+```env
+RAILWAY_DOCKERFILE_PATH=docker/backend/Dockerfile
+```
+
+10. Remove custom frontend build/start commands if they are still set from an older attempt.
+
+The frontend Dockerfile already runs:
 
 ```bash
-npm run preview -- --host 0.0.0.0 --port $PORT
+npm ci
+npm run build
+npm run preview -- --host 0.0.0.0 --port ${PORT:-4173}
 ```
 
 11. Open `Networking`.
 12. Click `Generate Domain`.
-13. Copy the generated frontend URL.
+13. If Railway asks for the frontend port, use:
+
+```text
+4173
+```
+
+14. Copy the generated frontend URL.
 
 Write the frontend URL here:
 
@@ -424,8 +450,8 @@ Step 6 is done when:
 1. The frontend service is named `rentease-frontend`.
 2. The frontend service uses repo branch `main`.
 3. The frontend root directory is `/frontend`.
-4. The frontend build command is `npm ci && npm run build`.
-5. The frontend start command is `npm run preview -- --host 0.0.0.0 --port $PORT`.
+4. The frontend uses `frontend/Dockerfile`.
+5. The frontend does not use `docker/backend/Dockerfile`.
 6. The frontend has a generated public Railway URL.
 7. The frontend variables are pasted.
 
@@ -861,6 +887,32 @@ Fix: the Dockerfile probably did not copy `backend/` into the image. Update the 
 Problem: frontend works locally but not on Railway.
 
 Fix: make sure the frontend start command binds to `0.0.0.0` and uses `$PORT`.
+
+Problem: frontend build fails with `EBUSY: resource busy or locked, rmdir '/app/node_modules/.vite'`.
+
+Fix:
+
+1. Make sure the latest repo commit is deployed.
+2. Make sure `frontend/Dockerfile` exists in GitHub.
+3. Open `rentease-frontend`.
+4. Set Root Directory to `/frontend`.
+5. Delete `RAILWAY_DOCKERFILE_PATH=docker/backend/Dockerfile` from frontend variables if it exists.
+6. Let Railway use `/frontend/Dockerfile`, or set `RAILWAY_DOCKERFILE_PATH=Dockerfile`.
+7. Redeploy with cleared build cache if Railway offers that option.
+
+This avoids the cached Nixpacks build path that can lock `node_modules/.vite`.
+
+Problem: backend crashes with `AH00534: apache2: Configuration error: More than one MPM loaded`.
+
+Fix:
+
+1. Make sure the latest repo commit is deployed.
+2. Open `rentease-backend`.
+3. Keep Root Directory as `/`.
+4. Keep `RAILWAY_DOCKERFILE_PATH=docker/backend/Dockerfile`.
+5. Redeploy with cleared build cache if Railway offers that option.
+
+The backend Dockerfile disables conflicting Apache MPM modules and enables `mpm_prefork` before Apache starts.
 
 Problem: API calls fail with CORS errors.
 
