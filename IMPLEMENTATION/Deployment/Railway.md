@@ -500,6 +500,145 @@ If you use a custom domain later:
 
 Then update CORS and Google OAuth allowed origins.
 
+### Current RentEase Railway values
+
+Use this exact section for the current Railway deployment.
+
+Your current public URLs are:
+
+```text
+BACKEND_URL=https://rentease-backend-production-20d0.up.railway.app
+FRONTEND_URL=https://rentease-frontend-production.up.railway.app
+```
+
+Important: frontend variables must use the `VITE_` prefix. The frontend does not read `RENTEASE_APP_URL`, `RENTEASE_DB_HOST`, `GOOGLE_OAUTH_ENABLED`, or `MAIL_*`.
+
+Important: after changing frontend `VITE_` variables, redeploy the frontend. Vite bakes these values into the production JavaScript bundle during `npm run build`.
+
+#### Backend variables for `rentease-backend`
+
+Paste this into the `rentease-backend` service only:
+
+```env
+RAILWAY_DOCKERFILE_PATH=docker/backend/Dockerfile
+
+RENTEASE_APP_NAME=RentEase
+RENTEASE_APP_ENV=production
+RENTEASE_APP_URL=https://rentease-backend-production-20d0.up.railway.app
+RENTEASE_FRONTEND_URL=https://rentease-frontend-production.up.railway.app
+
+RENTEASE_DB_HOST=${{rentease-mysql.MYSQLHOST}}
+RENTEASE_DB_PORT=${{rentease-mysql.MYSQLPORT}}
+RENTEASE_DB_NAME=${{rentease-mysql.MYSQLDATABASE}}
+RENTEASE_DB_USER=${{rentease-mysql.MYSQLUSER}}
+RENTEASE_DB_PASS=${{rentease-mysql.MYSQLPASSWORD}}
+
+RENTEASE_ALLOWED_ORIGINS=https://rentease-frontend-production.up.railway.app
+RENTEASE_COOKIE_SAMESITE=Lax
+RENTEASE_COOKIE_DOMAIN=
+
+RENTEASE_AUTO_MIGRATE=true
+RENTEASE_AUTO_SEED=true
+
+GOOGLE_OAUTH_ENABLED=true
+GOOGLE_CLIENT_ID=671627236515-imeil2lb9mjsgq515qtpa8qeijj9q8rd.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=https://rentease-frontend-production.up.railway.app/auth/google/callback
+
+MAIL_PROVIDER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=renteasesupport@gmail.com
+MAIL_PASSWORD=PASTE_GMAIL_APP_PASSWORD_HERE
+MAIL_FROM_NAME=RentEase
+MAIL_FROM_ADDRESS=renteasesupport@gmail.com
+MAIL_REPLY_TO=renteasesupport@gmail.com
+```
+
+Do not put the real Gmail password in GitHub or in this markdown file. Use a Gmail App Password in Railway only.
+
+`RENTEASE_AUTO_MIGRATE=true` applies `database/rentease_base_schema.sql` at backend startup.
+
+`RENTEASE_AUTO_SEED=true` applies `database/staging_seed.sql` only when the `users` table is empty. After the first successful seed, it skips seeding so existing users are not wiped.
+
+For real production after testing, change this variable:
+
+```env
+RENTEASE_AUTO_SEED=false
+```
+
+#### Frontend variables for `rentease-frontend`
+
+Paste this into the `rentease-frontend` service only:
+
+```env
+RAILWAY_DOCKERFILE_PATH=Dockerfile
+
+VITE_API_BASE_URL=https://rentease-backend-production-20d0.up.railway.app
+VITE_APP_ENV=production
+VITE_APP_NAME=RentEase
+
+VITE_ENABLE_GOOGLE_AUTH=true
+VITE_GOOGLE_CLIENT_ID=671627236515-imeil2lb9mjsgq515qtpa8qeijj9q8rd.apps.googleusercontent.com
+VITE_GOOGLE_REDIRECT_URI=https://rentease-frontend-production.up.railway.app/auth/google/callback
+```
+
+Do not paste backend database, mail, or Google client secret variables into the frontend service.
+
+Delete these from `rentease-frontend` if they exist there:
+
+```env
+RENTEASE_DB_HOST
+RENTEASE_DB_PORT
+RENTEASE_DB_NAME
+RENTEASE_DB_USER
+RENTEASE_DB_PASS
+MAIL_PASSWORD
+GOOGLE_CLIENT_SECRET
+GOOGLE_OAUTH_ENABLED
+RENTEASE_APP_URL
+```
+
+The frontend service should have only frontend-safe variables. For this app, that means `RAILWAY_DOCKERFILE_PATH` and `VITE_*`.
+
+#### Google Cloud update for Railway
+
+The Google button can appear only after the frontend is built with `VITE_ENABLE_GOOGLE_AUTH=true` and `VITE_GOOGLE_CLIENT_ID`.
+
+The Google popup will work only if Google Cloud allows the Railway frontend domain.
+
+In Google Cloud Console, open the OAuth Web Client and add:
+
+Authorized JavaScript origins:
+
+```text
+http://localhost:5173
+https://rentease-frontend-production.up.railway.app
+```
+
+Authorized redirect URIs:
+
+```text
+http://localhost:5173/auth/google/callback
+https://rentease-frontend-production.up.railway.app/auth/google/callback
+```
+
+Save the Google Cloud changes, then redeploy both Railway services.
+
+#### Required redeploy order after these variables
+
+1. Open `rentease-backend`.
+2. Redeploy latest commit.
+3. Wait until logs show the backend started.
+4. Open `rentease-frontend`.
+5. Redeploy latest commit.
+6. Hard refresh the browser with `Ctrl + F5`.
+7. Open DevTools Network tab and confirm API calls go to:
+
+```text
+https://rentease-backend-production-20d0.up.railway.app
+```
+
 ## Step 8: Initialize the database
 
 Recommended production-safe order:

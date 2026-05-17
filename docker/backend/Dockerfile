@@ -22,9 +22,13 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 COPY backend/ /var/www/html/
+COPY database/ /opt/rentease/database/
+COPY docker/backend/entrypoint.sh /usr/local/bin/rentease-entrypoint
+
+RUN chmod +x /usr/local/bin/rentease-entrypoint
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
     && mkdir -p storage/uploads storage/private/proofs storage/private/ids storage/public/rooms storage/public/boarding_houses storage/profiles \
     && chown -R www-data:www-data storage vendor
 
-CMD ["bash", "-lc", "set -e; export APACHE_PORT=${PORT:-80}; sed -i \"s/^Listen .*/Listen ${APACHE_PORT}/\" /etc/apache2/ports.conf; sed -i \"s/<VirtualHost \\*:[0-9][0-9]*>/<VirtualHost *:${APACHE_PORT}>/\" /etc/apache2/sites-available/000-default.conf; a2dismod mpm_event mpm_worker >/dev/null 2>&1 || true; a2enmod mpm_prefork >/dev/null 2>&1 || true; apache2-foreground"]
+CMD ["rentease-entrypoint"]
