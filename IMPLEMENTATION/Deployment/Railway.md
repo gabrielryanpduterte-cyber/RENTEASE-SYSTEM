@@ -390,8 +390,10 @@ The frontend Dockerfile already runs:
 ```bash
 npm ci
 npm run build
-npm run preview -- --host 0.0.0.0 --port ${PORT:-4173}
+npm run start
 ```
+
+`npm run start` reads Railway's `PORT` environment variable through `scripts/serve-preview.mjs`, then starts Vite preview with a real numeric port. This avoids the Railway issue where `$PORT` can be passed to Vite as literal text.
 
 11. Open `Networking`.
 12. Click `Generate Domain`.
@@ -886,7 +888,43 @@ Fix: the Dockerfile probably did not copy `backend/` into the image. Update the 
 
 Problem: frontend works locally but not on Railway.
 
-Fix: make sure the frontend start command binds to `0.0.0.0` and uses `$PORT`.
+Fix:
+
+1. Make sure the latest repo commit is deployed.
+2. Make sure `frontend/package.json` has `start`.
+3. If Railway has a custom Start Command, set it to:
+
+```bash
+npm run start
+```
+
+4. Do not use this older command if Railway passes `$PORT` literally:
+
+```bash
+npm run preview -- --host 0.0.0.0 --port $PORT
+```
+
+5. Redeploy `rentease-frontend`.
+
+The `start` script uses `scripts/serve-preview.mjs` to convert Railway's `PORT` into a numeric Vite port.
+
+Problem: frontend crashes with `Error: No available ports found between $PORT and 65535`.
+
+Fix:
+
+1. Remove the old Start Command:
+
+```bash
+npm run preview -- --host 0.0.0.0 --port $PORT
+```
+
+2. Use this Start Command:
+
+```bash
+npm run start
+```
+
+3. Redeploy the frontend from the latest `main` branch.
 
 Problem: frontend build fails with `EBUSY: resource busy or locked, rmdir '/app/node_modules/.vite'`.
 
