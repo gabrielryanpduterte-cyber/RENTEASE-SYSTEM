@@ -492,24 +492,333 @@ For real production, keep seeded demo users out unless you intentionally need th
 
 ## Step 9: Google OAuth setup
 
+This step enables the `Continue with Google` button.
+
+You can skip Step 9 for now if you want email/password login only. Keep these variables as `false`:
+
+```env
+GOOGLE_OAUTH_ENABLED=false
+VITE_ENABLE_GOOGLE_AUTH=false
+```
+
 Use `renteasesupport@gmail.com` as the Google Cloud project owner/support email.
 
+RentEase Google login flow:
+
+1. The frontend shows the Google button.
+2. Google returns an ID token to the frontend.
+3. The frontend sends that ID token to `google-auth.php?action=google-auth`.
+4. The backend verifies the token audience against `GOOGLE_CLIENT_ID`.
+5. RentEase creates, links, or logs in the user.
+
+Current RentEase does not use a backend Google redirect callback. Do not add `https://PASTE_BACKEND_DOMAIN_HERE/auth/google/callback` unless you later implement a backend OAuth callback route.
+
+### Step 9A: Prepare your Railway URLs
+
+Before opening Google Cloud, fill these in from Railway Step 7:
+
+```text
+BACKEND_URL=https://PASTE_BACKEND_DOMAIN_HERE
+FRONTEND_URL=https://PASTE_FRONTEND_DOMAIN_HERE
+```
+
+Use the exact Railway domains, including `https://`.
+
+Example format only:
+
+```text
+BACKEND_URL=https://rentease-backend-production.up.railway.app
+FRONTEND_URL=https://rentease-production.up.railway.app
+```
+
+Do not use the example values unless Railway gave you those exact URLs.
+
+### Step 9B: Create or open the Google Cloud project
+
 1. Go to `https://console.cloud.google.com`.
-2. Create or open the RentEase project.
-3. Go to `APIs & Services`.
-4. Open `OAuth consent screen`.
-5. Set support email to `renteasesupport@gmail.com`.
-6. Set user type to `External` if real public users need to log in.
-7. Go to `Credentials`.
-8. Create an OAuth 2.0 Client ID for web application.
-9. Add authorized JavaScript origins:
-   - `https://YOUR_FRONTEND_DOMAIN`
-   - `https://YOUR_CUSTOM_FRONTEND_DOMAIN` if used
-10. Add authorized redirect URIs:
-   - `https://YOUR_FRONTEND_DOMAIN/auth/google/callback`
-   - `https://YOUR_BACKEND_DOMAIN/auth/google/callback` if backend callback is implemented
-11. Copy the client ID and secret into Railway variables.
-12. Redeploy frontend and backend after changing variables.
+2. Sign in using `renteasesupport@gmail.com` or the Google account that will own production OAuth.
+3. Open the project selector at the top of the page.
+4. Click `New Project` if RentEase does not have a Google Cloud project yet.
+5. Use this project name:
+
+```text
+RentEase Production
+```
+
+6. Click `Create`.
+7. Make sure `RentEase Production` is selected before continuing.
+
+### Step 9C: Configure OAuth consent / branding
+
+Google's current Google Identity Services setup requires an OAuth client ID and OAuth branding/consent details.
+
+1. In Google Cloud Console, go to `APIs & Services`.
+2. Open `OAuth consent screen` or `Google Auth Platform`.
+3. Open `Branding`.
+4. Set the app name:
+
+```text
+RentEase
+```
+
+5. Set user support email:
+
+```text
+renteasesupport@gmail.com
+```
+
+6. Set audience / user type:
+   - Choose `External` if real users with any Google account will log in.
+   - Choose `Internal` only if this is under a Google Workspace organization and only organization users will log in.
+7. Add developer contact email:
+
+```text
+renteasesupport@gmail.com
+```
+
+8. For scopes, keep only the basic identity scopes:
+
+```text
+openid
+email
+profile
+```
+
+9. Do not request Gmail, Drive, Calendar, or other sensitive scopes for RentEase login.
+10. Save the consent screen.
+
+If Google keeps the app in Testing mode, add test users before testing:
+
+```text
+renteasesupport@gmail.com
+your-personal-google-email@example.com
+```
+
+For a class/demo deployment, Testing mode is acceptable. For real public production, publish the app when the domain and policy pages are ready.
+
+### Step 9D: Create the OAuth client ID
+
+1. In Google Cloud Console, go to `APIs & Services`.
+2. Open `Credentials`.
+3. Click `Create Credentials`.
+4. Choose `OAuth client ID`.
+5. For application type, choose:
+
+```text
+Web application
+```
+
+6. Set the name:
+
+```text
+RentEase Railway Web
+```
+
+7. Under `Authorized JavaScript origins`, add your frontend origin only.
+
+Paste this, replacing the placeholder:
+
+```text
+https://PASTE_FRONTEND_DOMAIN_HERE
+```
+
+Important: the JavaScript origin must contain only the scheme and host. Do not include `/login`, `/register`, or `/auth/google/callback`.
+
+Correct:
+
+```text
+https://rentease-production.up.railway.app
+```
+
+Wrong:
+
+```text
+https://rentease-production.up.railway.app/login
+https://rentease-production.up.railway.app/auth/google/callback
+```
+
+8. Under `Authorized redirect URIs`, add this frontend callback for compatibility:
+
+```text
+https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
+```
+
+RentEase currently uses frontend callback mode, so the JavaScript origin is the critical setting. The redirect URI is included because the app has a matching `VITE_GOOGLE_REDIRECT_URI` setting and it keeps the configuration ready if a redirect mode is added later.
+
+9. Click `Create`.
+10. Copy the generated Client ID.
+11. Copy the generated Client Secret if Google shows one.
+
+The Client ID looks like:
+
+```text
+1234567890-example.apps.googleusercontent.com
+```
+
+Never paste the Client Secret into frontend variables or GitHub. Keep it backend-only in Railway if you decide to store it.
+
+### Step 9E: Update Railway backend variables
+
+Open Railway:
+
+1. Go to `RentEase Production`.
+2. Click `rentease-backend`.
+3. Open `Variables`.
+4. Add or update these variables.
+
+Paste this into the backend variables editor and replace the placeholders:
+
+```env
+GOOGLE_OAUTH_ENABLED=true
+GOOGLE_CLIENT_ID=PASTE_GOOGLE_CLIENT_ID_HERE
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
+```
+
+For the current RentEase code, `GOOGLE_CLIENT_SECRET` can stay blank because the backend verifies the Google ID token using `GOOGLE_CLIENT_ID`.
+
+If you want to store the secret anyway, use backend only:
+
+```env
+GOOGLE_CLIENT_SECRET=PASTE_GOOGLE_CLIENT_SECRET_HERE
+```
+
+Do not add `GOOGLE_CLIENT_SECRET` to `rentease-frontend`.
+
+### Step 9F: Update Railway frontend variables
+
+Open Railway:
+
+1. Go to `RentEase Production`.
+2. Click `rentease-frontend`.
+3. Open `Variables`.
+4. Add or update these variables.
+
+Paste this into the frontend variables editor and replace the placeholders:
+
+```env
+VITE_ENABLE_GOOGLE_AUTH=true
+VITE_GOOGLE_CLIENT_ID=PASTE_GOOGLE_CLIENT_ID_HERE
+VITE_GOOGLE_REDIRECT_URI=https://PASTE_FRONTEND_DOMAIN_HERE/auth/google/callback
+```
+
+The frontend needs the Google Client ID because the Google button runs in the browser. This is normal. The frontend must not receive the Google Client Secret.
+
+### Step 9G: Redeploy both Railway services
+
+Railway variables are applied through a new deployment.
+
+1. Open `rentease-backend`.
+2. Go to `Deployments`.
+3. Redeploy the latest deployment.
+4. Wait until the backend is `Active`.
+5. Open `rentease-frontend`.
+6. Go to `Deployments`.
+7. Redeploy the latest deployment.
+8. Wait until the frontend is `Active`.
+
+If Railway shows staged changes after editing variables, review and apply/deploy those changes.
+
+### Step 9H: Test Google login
+
+1. Open your frontend Railway URL:
+
+```text
+https://PASTE_FRONTEND_DOMAIN_HERE
+```
+
+2. Go to `Login` or `Register`.
+3. Confirm the `Continue with Google` button appears.
+4. Click `Continue with Google`.
+5. Choose a Google account.
+6. If this is a new user, RentEase should send you to `Complete Profile`.
+7. Fill in the required role, contact number, and password.
+8. Submit the profile.
+9. Confirm the user lands on the correct dashboard.
+
+Expected behavior:
+
+1. The Google popup opens.
+2. Google returns a credential.
+3. The frontend calls the Railway backend.
+4. The backend accepts the token.
+5. RentEase logs in or asks for profile completion.
+
+### Step 9I: Fix common Google OAuth errors
+
+Problem: `The given origin is not allowed for the given client ID`.
+
+Fix:
+
+1. Go to Google Cloud Console.
+2. Open `APIs & Services`.
+3. Open `Credentials`.
+4. Click the `RentEase Railway Web` OAuth client.
+5. Under `Authorized JavaScript origins`, add the exact frontend domain:
+
+```text
+https://PASTE_FRONTEND_DOMAIN_HERE
+```
+
+6. Save.
+7. Wait a few minutes.
+8. Hard refresh the frontend page.
+
+Problem: The Google button does not appear.
+
+Fix:
+
+1. Check `rentease-frontend` variables:
+
+```env
+VITE_ENABLE_GOOGLE_AUTH=true
+VITE_GOOGLE_CLIENT_ID=PASTE_GOOGLE_CLIENT_ID_HERE
+```
+
+2. Redeploy `rentease-frontend`.
+3. Confirm the Client ID is not empty.
+
+Problem: Google popup works, but RentEase says Google OAuth is disabled.
+
+Fix:
+
+1. Check `rentease-backend` variables:
+
+```env
+GOOGLE_OAUTH_ENABLED=true
+GOOGLE_CLIENT_ID=PASTE_GOOGLE_CLIENT_ID_HERE
+```
+
+2. Redeploy `rentease-backend`.
+
+Problem: Google popup works, but backend rejects the token.
+
+Fix:
+
+1. Confirm frontend and backend use the same Google Client ID.
+2. Confirm there are no extra spaces around the Client ID.
+3. Confirm the frontend domain is listed in Authorized JavaScript origins.
+4. Redeploy both services after variable changes.
+
+Problem: Google says app is unverified.
+
+Fix:
+
+1. For demo/testing, keep the app in Testing mode and add your Google account as a test user.
+2. For public production, complete the OAuth consent screen and publish the app.
+3. Avoid sensitive scopes. RentEase only needs `openid`, `email`, and `profile`.
+
+Step 9 is done when:
+
+1. Google Cloud has a web OAuth client for RentEase.
+2. The frontend Railway domain is listed in Authorized JavaScript origins.
+3. The frontend callback URI is listed in Authorized redirect URIs.
+4. `rentease-backend` has `GOOGLE_OAUTH_ENABLED=true`.
+5. `rentease-backend` has the same `GOOGLE_CLIENT_ID`.
+6. `rentease-frontend` has `VITE_ENABLE_GOOGLE_AUTH=true`.
+7. `rentease-frontend` has the same `VITE_GOOGLE_CLIENT_ID`.
+8. Both services were redeployed.
+9. The `Continue with Google` button works from the Railway frontend domain.
 
 ## Step 10: Final deployment checks
 
@@ -607,11 +916,15 @@ Expected output:
 - Verification checklist for admin, owner, seeker, CORS, Google OAuth, and MySQL
 ```
 
-## Official Railway references
+## Official references
 
 - Services: `https://docs.railway.com/develop/services`
 - Monorepo deployments: `https://docs.railway.com/guides/monorepo`
+- Railway variables: `https://docs.railway.com/variables`
+- Railway best practices: `https://docs.railway.com/overview/best-practices`
 - MySQL: `https://docs.railway.com/guides/mysql`
 - Public networking and `$PORT`: `https://docs.railway.com/public-networking`
 - Dockerfile path: `https://docs.railway.com/reference/dockerfiles`
 - Accounts and 2FA: `https://docs.railway.com/access/accounts`
+- Google Identity Services setup: `https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid`
+- Google OAuth verification and consent screen: `https://support.google.com/cloud/answer/13461325`
