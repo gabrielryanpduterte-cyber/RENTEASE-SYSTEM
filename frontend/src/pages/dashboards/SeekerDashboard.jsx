@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, CalendarDays, Home, Receipt, RotateCcw } from 'lucide-react';
-import { announcementsApi, seekerDashboardApi } from '../../api/client.js';
+import { CalendarDays, Home, Receipt, RotateCcw } from 'lucide-react';
+import { seekerDashboardApi } from '../../api/client.js';
 import { useAuth } from '../../auth/useAuth.js';
 import AppShell from '../../components/AppShell.jsx';
 import { EmptyState, LoadingSkeleton } from '../../components/seeker/SeekerShared.jsx';
@@ -18,7 +18,6 @@ function firstName(fullName = '') {
 export default function SeekerDashboard() {
   const { authState } = useAuth();
   const [state, setState] = useState({ loading: true, error: '', data: null });
-  const [announcementAction, setAnnouncementAction] = useState({ loading: false, error: '' });
 
   async function loadDashboard() {
     setState((current) => ({ ...current, loading: true, error: '' }));
@@ -46,40 +45,10 @@ export default function SeekerDashboard() {
   const activeReservation = data.active_reservation;
   const pendingReservation = data.pending_reservation;
   const currentPayment = data.current_payment;
-  const announcements = Array.isArray(data.announcements) ? data.announcements : [];
-  const unreadAnnouncements = Number(data.unread_announcements_count || 0);
   const rentStatus = currentPayment?.payment_status || 'No record';
   const unpaidAmount = currentPayment
     ? Math.max(Number(currentPayment.amount_due || 0) - Number(currentPayment.amount_paid || 0), 0)
     : 0;
-
-  async function markAnnouncementRead(announcementId) {
-    setAnnouncementAction({ loading: true, error: '' });
-    try {
-      await announcementsApi.markRead(announcementId);
-      await loadDashboard();
-      setAnnouncementAction({ loading: false, error: '' });
-    } catch (error) {
-      setAnnouncementAction({
-        loading: false,
-        error: error?.errors?.[0] || error?.message || 'Unable to update announcement.',
-      });
-    }
-  }
-
-  async function markAllAnnouncementsRead() {
-    setAnnouncementAction({ loading: true, error: '' });
-    try {
-      await announcementsApi.markAllRead();
-      await loadDashboard();
-      setAnnouncementAction({ loading: false, error: '' });
-    } catch (error) {
-      setAnnouncementAction({
-        loading: false,
-        error: error?.errors?.[0] || error?.message || 'Unable to update announcements.',
-      });
-    }
-  }
 
   return (
     <AppShell
@@ -88,7 +57,6 @@ export default function SeekerDashboard() {
       quickStats={[
         { label: 'Pending Reservations', value: String(data.pending_reservations_count || 0), tone: 'amber' },
         { label: 'Current Rent', value: currentPayment ? rentStatus : 'No record', tone: currentPayment?.payment_status === 'paid' ? 'mint' : 'amber' },
-        { label: 'Announcements', value: unreadAnnouncements > 0 ? `${unreadAnnouncements} new` : 'Clear', tone: unreadAnnouncements > 0 ? 'amber' : 'mint' },
       ]}
     >
       <section className="seeker-main-column">
@@ -176,75 +144,6 @@ export default function SeekerDashboard() {
                 </p>
               </div>
             )}
-
-            <article className="seeker-status-card seeker-announcement-card">
-              <div className="seeker-card-head">
-                <Bell size={20} />
-                <h2>Announcements</h2>
-                {unreadAnnouncements > 0 && <span className="announcement-badge">{unreadAnnouncements}</span>}
-              </div>
-
-              {announcementAction.error && (
-                <div className="mini-feedback mini-error">
-                  <p>{announcementAction.error}</p>
-                </div>
-              )}
-
-              {announcements.length > 0 ? (
-                <>
-                  <div className="tenant-announcement-list">
-                    {announcements.map((announcement) => (
-                      <div
-                        className={`tenant-announcement ${announcement.is_read ? 'is-read' : 'is-unread'}`}
-                        key={announcement.announcement_id}
-                      >
-                        <div>
-                          <div className="tenant-announcement-meta">
-                            <span>{announcement.category}</span>
-                            <span>{formatDate(announcement.created_at)}</span>
-                          </div>
-                          <strong>{announcement.title}</strong>
-                          {announcement.image_url && (
-                            <img
-                              className="tenant-announcement-image"
-                              src={announcement.image_url}
-                              alt=""
-                              loading="lazy"
-                            />
-                          )}
-                          <p>{announcement.body}</p>
-                          {announcement.expires_at && <small>Expires {formatDate(announcement.expires_at)}</small>}
-                        </div>
-                        {!announcement.is_read && (
-                          <button
-                            type="button"
-                            className="button-light"
-                            onClick={() => markAnnouncementRead(announcement.announcement_id)}
-                            disabled={announcementAction.loading}
-                          >
-                            Mark Read
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {unreadAnnouncements > 0 && (
-                    <button
-                      type="button"
-                      className="button-light"
-                      onClick={markAllAnnouncementsRead}
-                      disabled={announcementAction.loading}
-                    >
-                      Mark All Read
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="state-card state-empty">
-                  <p>No announcements for your room yet.</p>
-                </div>
-              )}
-            </article>
 
           </>
         )}

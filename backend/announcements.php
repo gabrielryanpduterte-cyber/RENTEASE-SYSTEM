@@ -50,10 +50,24 @@ try {
 function handle_announcements_get(array $actor): void
 {
     if ($actor['role'] === 'seeker') {
+        $announcements = fetch_seeker_announcements((int)$actor['user_id'], parse_limit_param($_GET['limit'] ?? 20, 20, 50));
+
+        if (normalize_payload_bool($_GET['include_count'] ?? false)) {
+            json_response(
+                true,
+                'Announcements fetched successfully.',
+                [
+                    'items' => $announcements,
+                    'unread_announcements_count' => count_seeker_unread_announcements((int)$actor['user_id']),
+                ],
+                []
+            );
+        }
+
         json_response(
             true,
             'Announcements fetched successfully.',
-            fetch_seeker_announcements((int)$actor['user_id'], parse_limit_param($_GET['limit'] ?? 20, 20, 50)),
+            $announcements,
             []
         );
     }

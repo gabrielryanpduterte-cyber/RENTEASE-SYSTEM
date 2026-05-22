@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth.js';
+import SeekerAnnouncementBell from './seeker/SeekerAnnouncementBell.jsx';
 import { roleLabel, roleDashboardPath } from '../utils/roles.js';
 import { 
   LayoutDashboard, 
@@ -76,6 +77,10 @@ function AppShell({ title, subtitle, quickStats = [], children }) {
   const shellRole = NAV_BY_ROLE[role] ? role : 'guest';
   const profileImageUrl = user?.profile_photo_url || user?.profile_picture || '';
   const userInitial = user?.full_name?.trim()?.charAt(0)?.toUpperCase() || 'U';
+  const visibleQuickStats =
+    role === 'seeker'
+      ? quickStats.filter((item) => String(item?.label || '').toLowerCase() !== 'announcements')
+      : quickStats;
 
   async function onLogout() {
     setLoggingOut(true);
@@ -110,7 +115,10 @@ function AppShell({ title, subtitle, quickStats = [], children }) {
             {!sidebarCollapsed && (
               <div className="brand-text">
                 <h1>RentEase</h1>
-                <p>{roleLabel(role)}</p>
+                <div className="sidebar-role-row">
+                  <p>{roleLabel(role)}</p>
+                  {role === 'seeker' && <SeekerAnnouncementBell userId={user?.user_id} align="sidebar" />}
+                </div>
               </div>
             )}
           </div>
@@ -217,9 +225,9 @@ function AppShell({ title, subtitle, quickStats = [], children }) {
         </header>
 
         {/* Quick Stats */}
-        {quickStats.length > 0 && (
+        {visibleQuickStats.length > 0 && (
           <section className="stats-grid">
-            {quickStats.map((item, index) => (
+            {visibleQuickStats.map((item, index) => (
               <div
                 className={`stat-card stat-${item.tone || 'neutral'}`}
                 key={`${item.label}-${index}`}
